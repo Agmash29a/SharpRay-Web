@@ -1,0 +1,1692 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" /><meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  /><title>SharpRay — browser ray tracer</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family:
+        Segoe UI,
+        Arial,
+        sans-serif;
+      background: #101418;
+      color: #e6ecef;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+    }
+    header {
+      padding: 24px 30px;
+      border-bottom: 1px solid #313c43;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    h1 {
+      font-size: 28px;
+      margin: 0;
+      letter-spacing: -1px;
+    }
+    h1 span {
+      color: #82dfb2;
+    }
+    small,
+    .muted {
+      color: #a3b2bd;
+    }
+    main {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      min-height: 85vh;
+    }
+    aside {
+      padding: 24px;
+      border-right: 1px solid #313c43;
+      background: #171d22;
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      color: #b5c4cb;
+      margin: 18px 0 7px;
+    }
+    select,
+    button,
+    textarea {
+      font: inherit;
+      color: inherit;
+      background: #242e35;
+      border: 1px solid #43515a;
+      border-radius: 7px;
+      padding: 10px;
+      width: 100%;
+    }
+    button {
+      cursor: pointer;
+      margin-top: 12px;
+    }
+    button:hover {
+      border-color: #82dfb2;
+    }
+    button:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+    .primary {
+      background: #82dfb2;
+      color: #10281d;
+      font-weight: 700;
+      border: 0;
+    }
+    input[type="range"] {
+      width: 100%;
+      accent-color: #82dfb2;
+    }
+    .stage {
+      padding: 28px;
+      min-width: 0;
+    }
+    .bar {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 13px;
+      margin-bottom: 14px;
+    }
+    canvas {
+      width: 100%;
+      max-height: 72vh;
+      object-fit: contain;
+      display: block;
+      background: #080b0e;
+      border: 1px solid #36424b;
+      border-radius: 9px;
+    }
+    progress {
+      width: 100%;
+      height: 5px;
+      accent-color: #82dfb2;
+    }
+    details {
+      margin-top: 20px;
+      color: #b5c4cb;
+      line-height: 1.6;
+    }
+    summary {
+      cursor: pointer;
+    }
+    textarea {
+      font: 12px/1.5 monospace;
+      height: 330px;
+      resize: vertical;
+      margin-top: 12px;
+    }
+    .row {
+      display: flex;
+      gap: 10px;
+    }
+    .row button {
+      flex: 1;
+    }
+    .tag {
+      font-size: 11px;
+      letter-spacing: 2px;
+      color: #82dfb2;
+    }
+    a {
+      color: #82dfb2;
+    }
+    #status {
+      white-space: pre-wrap;
+    }
+    @media (max-width: 750px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+      aside {
+        border-right: 0;
+      }
+      .stage {
+        padding: 16px;
+      }
+      header {
+        padding: 20px;
+      }
+      header small {
+        display: none;
+      }
+    }
+    /* Light interface; the render canvas retains its dark backdrop. */
+    :root {
+      color-scheme: light;
+      background: #fff;
+      color: #202a31;
+    }
+    header {
+      background: #fff;
+      border-color: #d7dfe3;
+    }
+    h1 span,
+    .tag {
+      color: #14764e;
+    }
+    small,
+    .muted {
+      color: #52636e;
+    }
+    aside {
+      background: #fff;
+      border-color: #d7dfe3;
+    }
+    .stage {
+      background: #fff;
+    }
+    label,
+    details {
+      color: #435560;
+    }
+    select,
+    button,
+    textarea {
+      background: #fff;
+      color: #202a31;
+      border-color: #aebcc5;
+    }
+    button:hover {
+      border-color: #14764e;
+      background: #f0f7f3;
+    }
+    .primary {
+      background: #14764e;
+      color: #fff;
+    }
+    .primary:hover {
+      background: #105f3f;
+      color: #fff;
+    }
+    input[type="range"],
+    progress {
+      accent-color: #14764e;
+    }
+    a {
+      color: #126c49;
+    }
+    canvas {
+      background: #000;
+      border-color: #303a42;
+    }
+  </style>
+  <header>
+    <div>
+      <div class="tag">RILEY T. PERRY · 2004 → BROWSER</div>
+      <h1>Sharp<span>Ray</span></h1>
+    </div>
+    <small>Recursive ray tracing · entirely offline</small>
+  </header>
+  <main>
+    <aside>
+      <div class="tag">RENDER STUDIO</div>
+      <label for="preset">Scene</label
+      ><select id="preset">
+        <optgroup label="Browser favourites">
+          <option value="studio">Reflection & glass</option>
+          <option value="materials">Procedural materials</option>
+          <option value="geometry">Geometry collection</option>
+        </optgroup>
+        <optgroup label="Original SharpRay — adapted">
+          <option value="spiral">Tyranny of Spheres — spiral</option>
+          <option value="single">Single sphere · 2004</option>
+          <option value="four">Four spheres · 2004</option>
+          <option value="fourMirror">Reflective four spheres · 2004</option>
+          <option value="boxes">Boxes · 2004</option>
+          <option value="helix">Tyranny of Spheres — helix · 2004</option>
+          <option value="glassOriginal">Transparent sphere · 2004</option>
+        </optgroup>
+        <optgroup label="New compositions">
+          <option value="dna">Chromatic double helix</option>
+          <option value="city">Midnight miniature city</option>
+          <option value="orrery">Orbital clockwork</option>
+          <option value="temple">Marble temple</option>
+          <option value="rainbow">Spectrum of glass</option>
+          <option value="pyramid">The golden stack</option>
+        </optgroup></select
+      ><label for="resolution">Resolution</label
+      ><select id="resolution">
+        <option value="480">Draft · 480 × 320</option>
+        <option value="900" selected>Standard · 900 × 600</option>
+        <option value="1500">Large · 1500 × 1000</option></select
+      ><label for="samples">Anti-aliasing</label
+      ><select id="samples">
+        <option value="1">1 sample / pixel</option>
+        <option value="4" selected>4 samples / pixel</option>
+        <option value="9">9 samples / pixel</option></select
+      ><label for="depth">Reflection depth <output id="depthOut">5</output></label
+      ><input id="depth" type="range" min="0" max="9" value="5" /><label for="orbit"
+        >Camera orbit <output id="orbitOut">0°</output></label
+      ><input id="orbit" type="range" min="-180" max="180" value="0" /><label for="zoom"
+        >Camera distance <output id="zoomOut">100%</output></label
+      ><input id="zoom" type="range" min="40" max="200" value="100" /><button
+        id="render"
+        class="primary"
+      >
+        Render scene
+      </button>
+      <div class="row">
+        <button id="stop" disabled>Stop</button><button id="save" disabled>Save PNG</button>
+      </div>
+      <p class="muted" style="font-size: 12px; line-height: 1.6">
+        Change settings, then render. Rendering runs in a background worker so the interface stays
+        responsive.
+      </p>
+    </aside>
+    <section class="stage">
+      <div class="bar">
+        <span id="sceneName">Reflection & glass</span><span id="status" role="status">Ready</span>
+      </div>
+      <p id="sceneDescription" class="muted" style="font-size: 13px; line-height: 1.5"></p>
+      <canvas id="canvas" width="900" height="600" aria-label="Ray-traced scene"></canvas
+      ><progress id="progress" max="100" value="0"></progress>
+      <details>
+        <summary>Edit scene JSON</summary>
+        <p>
+          Edit objects, materials, lights and camera. Applying a scene renders it; export a JSON
+          file to keep changes.
+        </p>
+        <textarea id="editor" spellcheck="false" aria-label="Scene JSON"></textarea>
+        <div class="row">
+          <button id="apply">Apply & render</button><button id="export">Export JSON</button
+          ><button id="import">Import JSON</button>
+        </div>
+        <input id="file" type="file" accept=".json,application/json" hidden />
+      </details>
+      <details>
+        <summary>About this adaptation & supported features</summary>
+        <p>
+          Based on <a href="https://github.com/Agmash29a/SharpRay">SharpRay</a>, © 2004 Riley T.
+          Perry — Chillers of Entropy. JavaScript adaptation of the sphere intersection, closest-hit
+          world traversal, pinhole camera, Phong lighting, checkerboard, recursive reflection and
+          Snell refraction logic. Seven adapted original scenes preserve their source geometry;
+          framing and shading may differ. Each scene has a provenance note above the render. Six new
+          compositions join the three browser favourites.
+        </p>
+        <p>
+          Includes spheres, ellipsoids, planes, boxes, triangles, discs and open cylinders;
+          point/directional lights; checker, marble and wood textures. New browser conveniences
+          include orbit controls, PNG export and JSON scenes. Noise textures and glass Fresnel
+          blending are new approximations. This is a core adaptation, not a complete port: legacy
+          mesh/PLY loading, torus quartics, transformed instances, image textures and the full
+          original scene catalogue are not included. Glass casts opaque shadows; no caustics or
+          global illumination.
+        </p>
+        <p>
+          Open this HTML directly in a current desktop browser. No server, installation, internet or
+          dependencies required. All processing happens on your computer.
+        </p>
+      </details>
+    </section>
+  </main>
+  <script id="engine" type="text/plain">
+      // (c) 2004 by Riley T. Perry - Chillers of Entropy
+      // SharpRay browser adaptation. Original comments are attributed by source file.
+      // Vector3D and RGBColour are represented by [x,y,z] and [r,g,b] arrays.
+      // Ray.o and Ray.d are passed as rayOrigin and rayDirection.
+      // World.worldObjects / worldLights are stored as JSON objects / lights.
+      // Preserve those JSON field names so previously exported scenes still load.
+      
+      // Adapted from SharpRay by Riley T. Perry (2004), commit 8b16f787edd2bf5595f8b37c2ab01fd54b59002a.
+      const addVectors = (a, b) => a.map((v, i) => v + b[i]),
+        subtractVectors = (a, b) => a.map((v, i) => v - b[i]),
+        scaleVector = (a, t) => a.map((v) => v * t),
+        dotProduct = (a, b) => a.reduce((s, v, i) => s + v * b[i], 0),
+        crossProduct = (a, b) => [
+          a[1] * b[2] - a[2] * b[1],
+          a[2] * b[0] - a[0] * b[2],
+          a[0] * b[1] - a[1] * b[0],
+        ],
+        normalise = (a) => scaleVector(a, 1 / Math.hypot(...a)),
+        blendColours = (a, b, t) => addVectors(scaleVector(a, 1 - t), scaleVector(b, t)),
+        reflectedDirection = (d, n) => subtractVectors(d, scaleVector(n, 2 * dotProduct(d, n)));
+      const kEpsilon = 1e-4;
+      /*
+       * Original source: OBJECT_Sphere.cs (and the other OBJECT_*.cs files).
+       * Sphere Description
+       * - A sphere is the points (r - radius) distance from the point (c centre)
+       * - p is a point of distance r away from c
+       * - The sphere is written in terms of (p-c).(p-c)-r^2=0
+       * - p can be expressed in terms of t (p=o+td) which is a quadratic (At^2+Bt+C=0)
+       * - The roots are then used to determine the number of hit points
+       *
+       * Browser adaptation: test each supported primitive and return its distance and normal.
+       * Sphere/ellipsoid coefficients use half of the original quadratic B coefficient.
+       * JSON geometry names (position, radius, radii) stay unchanged for compatibility.
+       */
+      function hitObject(rayOrigin, rayDirection, obj) {
+        let tmin = Infinity,
+          normal;
+        // Find the vector between the centre of the sphere and the ray origin
+        const temp = subtractVectors(rayOrigin, obj.position || [0, 0, 0]);
+        if (obj.type === "sphere" || obj.type === "ellipsoid") {
+          const r = obj.radii || [obj.radius, obj.radius, obj.radius],
+            q = temp.map((v, i) => v / r[i]),
+            v = rayDirection.map((v, i) => v / r[i]);
+          const a = dotProduct(v, v),
+            b = dotProduct(q, v),
+            c = dotProduct(q, q) - 1,
+            discriminant = b * b - a * c;
+          // Quadratics can have zero, one, or two real roots depending on the discriminant.
+          if (discriminant < 0) return null;
+          let smallerRoot = (-b - Math.sqrt(discriminant)) / a,
+            largerRoot = (-b + Math.sqrt(discriminant)) / a;
+          tmin = smallerRoot > kEpsilon ? smallerRoot : largerRoot;
+          if (tmin <= kEpsilon) return null;
+          normal = normalise(
+            addVectors(temp, scaleVector(rayDirection, tmin)).map((v, i) => v / (r[i] * r[i])),
+          );
+        } else if (obj.type === "plane" || obj.type === "disc") {
+          normal = normalise(obj.normal);
+          const denominator = dotProduct(rayDirection, normal);
+          if (Math.abs(denominator) < 1e-9) return null;
+          tmin = -dotProduct(temp, normal) / denominator;
+          if (tmin <= kEpsilon) return null;
+          if (
+            obj.type === "disc" &&
+            dotProduct(
+              addVectors(temp, scaleVector(rayDirection, tmin)),
+              addVectors(temp, scaleVector(rayDirection, tmin)),
+            ) >
+              obj.radius * obj.radius
+          )
+            return null;
+        } else if (obj.type === "box") {
+          let tEnter = -Infinity,
+            tExit = Infinity,
+            entryNormal,
+            exitNormal;
+          for (let i = 0; i < 3; i++) {
+            const h = obj.size[i] / 2;
+            if (Math.abs(rayDirection[i]) < 1e-12) {
+              if (Math.abs(temp[i]) > h) return null;
+              continue;
+            }
+            let a = (-h - temp[i]) / rayDirection[i],
+              b = (h - temp[i]) / rayDirection[i],
+              nearNormal = [0, 0, 0],
+              farNormal = [0, 0, 0];
+            nearNormal[i] = -1;
+            farNormal[i] = 1;
+            if (a > b) {
+              [a, b] = [b, a];
+              [nearNormal, farNormal] = [farNormal, nearNormal];
+            }
+            if (a > tEnter) {
+              tEnter = a;
+              entryNormal = nearNormal;
+            }
+            if (b < tExit) {
+              tExit = b;
+              exitNormal = farNormal;
+            }
+            if (tEnter > tExit) return null;
+          }
+          tmin = tEnter > kEpsilon ? tEnter : tExit;
+          normal = tEnter > kEpsilon ? entryNormal : exitNormal;
+          if (tmin <= kEpsilon) return null;
+        } else if (obj.type === "triangle") {
+          const [a, b, c] = obj.vertices,
+            edge1 = subtractVectors(b, a),
+            edge2 = subtractVectors(c, a),
+            h = crossProduct(rayDirection, edge2),
+            determinant = dotProduct(edge1, h);
+          if (Math.abs(determinant) < 1e-9) return null;
+          const q = subtractVectors(rayOrigin, a),
+            u = dotProduct(q, h) / determinant;
+          if (u < 0 || u > 1) return null;
+          const k = crossProduct(q, edge1),
+            v = dotProduct(rayDirection, k) / determinant;
+          if (v < 0 || u + v > 1) return null;
+          tmin = dotProduct(edge2, k) / determinant;
+          if (tmin <= kEpsilon) return null;
+          normal = normalise(crossProduct(edge1, edge2));
+        } else if (obj.type === "cylinder") {
+          const a = rayDirection[0] ** 2 + rayDirection[2] ** 2,
+            b = temp[0] * rayDirection[0] + temp[2] * rayDirection[2],
+            c = temp[0] ** 2 + temp[2] ** 2 - obj.radius ** 2,
+            discriminant = b * b - a * c;
+          if (discriminant < 0 || a < 1e-12) return null;
+          for (const z of [(-b - Math.sqrt(discriminant)) / a, (-b + Math.sqrt(discriminant)) / a]) {
+            if (z > kEpsilon && Math.abs(temp[1] + z * rayDirection[1]) <= obj.height / 2) {
+              tmin = z;
+              break;
+            }
+          }
+          if (!isFinite(tmin)) return null;
+          normal = normalise([temp[0] + tmin * rayDirection[0], 0, temp[2] + tmin * rayDirection[2]]);
+        } else return null;
+        return {
+          t: tmin,
+          n: normal,
+          s: obj,
+        };
+      }
+      /*
+       * Original source: World.cs
+       * hit Objects - Project ray and see if it hits an object
+       * Iterate through all objects and find
+       * the closest hit, if hit then assign
+       * qualities to the shading container
+       *
+       * Browser adaptation: the returned record contains t, n and s (distance, normal, object).
+       */
+      function hitObjects(rayOrigin, rayDirection, worldObjects, minDistance = Infinity) {
+        let shading = null;
+        for (const obj of worldObjects) {
+          const hit = hitObject(rayOrigin, rayDirection, obj);
+          if (hit && hit.t < minDistance) {
+            minDistance = hit.t;
+            shading = hit;
+          }
+        }
+        return shading;
+      }
+      /*
+       * Original source: TEXTURE_CheckerBoard.cs
+       * - CheckerBoard Texutre class
+       * (size) Size, (colour1, colour2) checker colours
+       * getColour - return colour given a hitpoint
+       *
+       * Browser adaptation: checker parity is equivalent to the original positive-modulus
+       * XOR pattern, with a small boundary offset to avoid floating-point flicker.
+       * The marble and wood noise below are browser additions, not the original noise classes.
+       */
+      function getColour(material, hitPoint) {
+        const colour1 = material.color || [0.7, 0.7, 0.7],
+          colour2 = material.color2 || [0.06, 0.08, 0.1],
+          scale = material.scale || 1;
+        if (material.texture === "checker") {
+          return ((hitPoint.reduce((s, x) => s + Math.floor((x + 1e-7) / scale), 0) % 2) + 2) % 2
+            ? colour1
+            : colour2;
+        }
+        let texturePoint = scaleVector(hitPoint, scale),
+          noise = 0;
+        for (let i = 1; i <= 5; i++)
+          noise +=
+            Math.sin(
+              texturePoint[0] * i * 1.73 + Math.sin(texturePoint[2] * i * 2.1) + texturePoint[1] * i,
+            ) / i;
+        if (material.texture === "marble")
+          return blendColours(colour1, colour2, 0.5 + 0.5 * Math.sin(texturePoint[0] * 4 + noise * 3));
+        if (material.texture === "wood")
+          return blendColours(
+            colour1,
+            colour2,
+            0.5 + 0.5 * Math.sin(Math.hypot(texturePoint[0], texturePoint[2]) * 10 + noise),
+          );
+        return colour1;
+      }
+      /*
+       * Original source: World.cs, MATERIAL_Phong.cs, MATERIAL_Reflective.cs,
+       * MATERIAL_Transparent.cs and MATERIAL_BasicMaterial.cs.
+       * trace Ray - Shade if an object is hit, otherwise
+       * use the ambient colour
+       *
+       * Check to see if reflections maxDepth has been reached
+       * If not then call the shading material which will in turn
+       * call this function again...
+       *
+       * shade - give this material some colour!
+       * ka: Ambient reflection coefficient; kd: diffuse reflection coefficient.
+       * cd: diffuse colour; ks: Specular component; n: Specular exponent (JSON: shininess).
+       * kr: reflection coefficient; kt: Transmission coefficient; ior: Index of refraction.
+       *
+       * Browser adaptation: material shading is combined here. Fresnel blending, ray-origin
+       * offsets and energy-weighted reflection differ from the original additive shading.
+       * Glass shadows are opaque; this renderer does not calculate caustics.
+       */
+      function traceRay(rayOrigin, rayDirection, world, depth, maxDepth) {
+        if (depth > maxDepth) return [0, 0, 0];
+        const shading = hitObjects(rayOrigin, rayDirection, world.objects);
+        if (!shading) return world.background;
+        const hitPoint = addVectors(rayOrigin, scaleVector(rayDirection, shading.t)),
+          insideObject = dotProduct(rayDirection, shading.n) > 0,
+          normal = insideObject ? scaleVector(shading.n, -1) : shading.n,
+          material = shading.s.material || {},
+          cd = getColour(material, hitPoint),
+          shadowRayOrigin = addVectors(hitPoint, scaleVector(normal, kEpsilon * 4));
+        let pixelColour = scaleVector(cd, material.ka ?? 0.12);
+        // Illumination loop
+        // Calculate additive colour with diffuse and specular components
+        for (const light of world.lights) {
+          const lightVector = light.direction
+              ? scaleVector(light.direction, -1)
+              : subtractVectors(light.position, hitPoint),
+            lightDistance = light.direction ? Infinity : Math.hypot(...lightVector),
+            lightDirection = normalise(lightVector),
+            ndotl = dotProduct(normal, lightDirection);
+          if (
+            ndotl <= 0 ||
+            hitObjects(shadowRayOrigin, lightDirection, world.objects, lightDistance - kEpsilon)
+          )
+            continue;
+          const specular =
+              Math.pow(
+                Math.max(
+                  0,
+                  dotProduct(
+                    reflectedDirection(scaleVector(lightDirection, -1), normal),
+                    scaleVector(rayDirection, -1),
+                  ),
+                ),
+                material.shininess || 100,
+              ) * (material.ks ?? 0.35),
+            lightColour = light.color || [1, 1, 1];
+          pixelColour = addVectors(
+            pixelColour,
+            cd.map(
+              (v, i) =>
+                (v * (material.kd ?? 0.7) * ndotl + specular) * lightColour[i] * (light.intensity ?? 1),
+            ),
+          );
+        }
+        const kr = material.kr || 0,
+          kt = material.kt || 0;
+        // Transparent.totalInternalReflection / transmittedRay: Calculate transmitted ray.
+        // Reverse the normal and invert the index ratio when the ray hits inside.
+        if (kt > 0) {
+          const eta = insideObject ? material.ior || 1.5 : 1 / (material.ior || 1.5),
+            cosTheta1 = -dotProduct(rayDirection, normal),
+            transmissionDiscriminant = 1 - eta * eta * (1 - cosTheta1 * cosTheta1),
+            normalReflectance = ((1 - (material.ior || 1.5)) / (1 + (material.ior || 1.5))) ** 2,
+            fresnelReflectance =
+              transmissionDiscriminant < 0
+                ? 1
+                : normalReflectance + (1 - normalReflectance) * (1 - cosTheta1) ** 5;
+          pixelColour = addVectors(
+            scaleVector(pixelColour, 1 - kt),
+            scaleVector(
+              traceRay(
+                shadowRayOrigin,
+                reflectedDirection(rayDirection, normal),
+                world,
+                depth + 1,
+                maxDepth,
+              ),
+              transmissionDiscriminant < 0 ? 1 : kr + (1 - kr) * fresnelReflectance,
+            ),
+          );
+          if (transmissionDiscriminant >= 0) {
+            const transmittedDirection = normalise(
+              addVectors(
+                scaleVector(rayDirection, eta),
+                scaleVector(normal, eta * cosTheta1 - Math.sqrt(transmissionDiscriminant)),
+              ),
+            );
+            pixelColour = addVectors(
+              pixelColour,
+              scaleVector(
+                traceRay(
+                  subtractVectors(hitPoint, scaleVector(normal, kEpsilon * 4)),
+                  transmittedDirection,
+                  world,
+                  depth + 1,
+                  maxDepth,
+                ),
+                kt * (1 - fresnelReflectance),
+              ),
+            );
+          }
+        } else if (kr > 0)
+          pixelColour = addVectors(
+            scaleVector(pixelColour, 1 - kr),
+            scaleVector(
+              traceRay(
+                shadowRayOrigin,
+                reflectedDirection(rayDirection, normal),
+                world,
+                depth + 1,
+                maxDepth,
+              ),
+              kr,
+            ),
+          );
+        return pixelColour;
+      }
+      /*
+       * Original source: CAMERA_BasicCamera.cs and CAMERA_PinHole.cs
+       * calculateUVW function (to be overridden), calculate orthonormal basis
+       * u,v,w: Orthonormal basis vectors
+       * e: Eye point; l: Lookat point; up: Up vector
+       *
+       * Browser adaptation: orbit and distance controls adjust e before calculating UVW.
+       * Field of view replaces the original view-plane distance d and PixelSize settings.
+       */
+      function calculateUVW(world, orbit, zoom) {
+        const camera = world.camera,
+          lookat = camera.target,
+          eyeOffset = scaleVector(subtractVectors(camera.eye, lookat), zoom),
+          orbitAngle = (orbit * Math.PI) / 180,
+          e = addVectors(lookat, [
+            eyeOffset[0] * Math.cos(orbitAngle) + eyeOffset[2] * Math.sin(orbitAngle),
+            eyeOffset[1],
+            -eyeOffset[0] * Math.sin(orbitAngle) + eyeOffset[2] * Math.cos(orbitAngle),
+          ]),
+          w = normalise(subtractVectors(e, lookat)),
+          u = normalise(crossProduct(camera.up || [0, 1, 0], w)),
+          v = crossProduct(w, u);
+        return {
+          eye: e,
+          w,
+          u,
+          v,
+          f: Math.tan((camera.fov * Math.PI) / 360),
+        };
+      }
+      // CAMERA_PinHole.renderScene: build the scene from the camera's perspective.
+      // Browser addition: a Web Worker sends completed scanline strips to the canvas.
+      onmessage = ({ data }) => {
+        const {
+            scene: world,
+            width: hRes,
+            height: vRes,
+            samples: numSamples,
+            depth: maxDepth,
+            orbit,
+            zoom,
+          } = data,
+          camera = calculateUVW(world, orbit, zoom),
+          sampleGridSize = Math.sqrt(numSamples),
+          renderStart = Date.now();
+        // Iterate through each point in the view plane
+        for (let row = 0; row < vRes; row += 8) {
+          const stripHeight = Math.min(8, vRes - row),
+            screenArray = new Uint8ClampedArray(hRes * stripHeight * 4);
+          for (let stripRow = 0; stripRow < stripHeight; stripRow++)
+            for (let col = 0; col < hRes; col++) {
+              // Trace ray and run through samples (browser: regular subpixel grid).
+              let pixelColour = [0, 0, 0];
+              for (let sampleRow = 0; sampleRow < sampleGridSize; sampleRow++)
+                for (let sampleCol = 0; sampleCol < sampleGridSize; sampleCol++) {
+                  const viewPlaneX =
+                      ((((2 * (col + (sampleCol + 0.5) / sampleGridSize)) / hRes - 1) * hRes) /
+                        vRes) *
+                      camera.f,
+                    viewPlaneY =
+                      (1 - (2 * (row + stripRow + (sampleRow + 0.5) / sampleGridSize)) / vRes) * camera.f,
+                    rayDirection = normalise(
+                      addVectors(
+                        addVectors(scaleVector(camera.u, viewPlaneX), scaleVector(camera.v, viewPlaneY)),
+                        scaleVector(camera.w, -1),
+                      ),
+                    );
+                  pixelColour = addVectors(
+                    pixelColour,
+                    traceRay(camera.eye, rayDirection, world, 0, maxDepth),
+                  );
+                }
+              const pixelOffset = (stripRow * hRes + col) * 4;
+              for (let colourComponent = 0; colourComponent < 3; colourComponent++)
+                screenArray[pixelOffset + colourComponent] =
+                  255 *
+                  Math.pow(Math.max(0, Math.min(1, pixelColour[colourComponent] / numSamples)), 1 / 2.2);
+              // Fill in temp screen buffer; the fourth channel is opacity.
+              screenArray[pixelOffset + 3] = 255;
+            }
+          postMessage(
+            {
+              y: row,
+              rows: stripHeight,
+              pixels: screenArray,
+              percent: Math.round(((row + stripHeight) / vRes) * 100),
+              seconds: (Date.now() - renderStart) / 1000,
+            },
+            [screenArray.buffer],
+          );
+        }
+        postMessage({
+          done: true,
+          seconds: (Date.now() - renderStart) / 1000,
+        });
+      };
+      
+    </script>
+  <script>
+    // Browser interface and scene builders. No C# UI code runs in the browser.
+    // Material JSON: color maps to cd; shininess maps to n.
+    // Camera JSON: eye maps to e; target maps to l.
+
+    "use strict";
+
+    const getElement = (id) => document.getElementById(id),
+      canvas = getElement("canvas"),
+      screenContext = canvas.getContext("2d");
+    let renderWorker = null,
+      world;
+    const createMaterial = (color, extra = {}) => ({
+      color,
+      ...extra,
+    });
+    const createSphere = (position, radius, material) => ({
+      type: "sphere",
+      position,
+      radius,
+      material,
+    });
+
+    // Additional source-derived scenes retain original geometry and material parameters.
+    // Framing is adapted to this viewer's 3:2 aspect ratio; shading follows this browser engine.
+    const createPlane = (y, material) => ({
+      type: "plane",
+      position: [0, y, 0],
+      normal: [0, 1, 0],
+      material,
+    });
+    const createBox = (position, size, material) => ({
+      type: "box",
+      position,
+      size,
+      material,
+    });
+    const grey = () =>
+      createMaterial([0.75, 0.75, 0.75], {
+        ka: 0.25,
+        kd: 0.4,
+        ks: 0.2,
+        shininess: 400,
+      });
+    const chrome = () =>
+      createMaterial([0.7, 0.8, 0.9], {
+        kr: 0.8,
+        kd: 0.2,
+      });
+    const glass = () =>
+      createMaterial([0.95, 0.98, 1], {
+        kt: 0.94,
+        ior: 1.5,
+        ka: 0,
+        kd: 0.02,
+        ks: 0.4,
+      });
+    const classicLights = () => [
+      {
+        position: [-5, 20, 0],
+        intensity: 1,
+      },
+      {
+        position: [10, 30, 10],
+        intensity: 1,
+      },
+    ];
+    function stage(eye = [9, 6, 12], target = [0, 2, 0], fov = 42) {
+      return {
+        background: [0, 0, 0],
+        camera: {
+          eye,
+          target,
+          fov,
+        },
+        lights: [
+          {
+            position: [-6, 12, 8],
+            intensity: 0.9,
+          },
+          {
+            position: [8, 7, -3],
+            color: [0.55, 0.75, 1],
+            intensity: 0.65,
+          },
+        ],
+        objects: [
+          createPlane(
+            0,
+            createMaterial([0.15, 0.18, 0.21], {
+              kr: 0.25,
+            }),
+          ),
+        ],
+      };
+    }
+    /* Source: World.Build_4SpheresSideView / Build_Reflective4SpheresSideView. */
+    function Build_4SpheresSideView(reflective) {
+      const s = {
+        background: [0, 0.15, 0.3],
+        camera: {
+          eye: [10, 5.5, 40],
+          target: [5.25, 5, 0],
+          fov: 21,
+        },
+        lights: classicLights(),
+        objects: [],
+      };
+      const colors = [
+          [0, 0.8, 0.6],
+          [1, 0.5, 0],
+          [0.88, 0.2, 1],
+          [0, 0, 1],
+        ],
+        positions = [
+          [0, 5, -0.5],
+          [4, 4, -6],
+          [4, 8.5, -2],
+          [10, 6, -2],
+        ];
+      for (let i = 0; i < 4; i++)
+        s.objects.push(
+          createSphere(
+            positions[i],
+            i === 2 ? 2 : 3,
+            createMaterial(colors[i], {
+              ka: i === 3 ? 0.9 : reflective ? [0.2, 0.3, 0.3][i] : 0.5,
+              kd: i === 0 || i === 3 ? 0.5 : 0.4,
+              ks: (reflective ? [0.2, 0.3, 0.75, 0] : [0.2, 0.5, 0.75, 0])[i],
+              shininess: [50, 250, 250, 1][i],
+              kr: reflective ? [0.5, 0.9, 0.75, 0][i] : 0,
+            }),
+          ),
+        );
+      s.objects.push(
+        createPlane(1, {
+          ...grey(),
+          kr: reflective ? 0.15 : 0,
+        }),
+      );
+      return s;
+    }
+    const EXTRA_SCENES = {
+      // Original World.cs: Build_SingleSphere
+      single: {
+        description:
+          "From Build_SingleSphere: original sphere, lights and material; camera framing adapted to 3:2.",
+        build() {
+          return {
+            background: [0, 0, 0],
+            camera: {
+              eye: [0, 0, 40],
+              target: [0, 0, 0],
+              fov: 20,
+            },
+            lights: classicLights(),
+            objects: [
+              createSphere(
+                [0, 0, 0],
+                5,
+                createMaterial([1, 0.8, 0.6], {
+                  ka: 0.5,
+                  kd: 0.5,
+                  ks: 0.3,
+                  shininess: 50,
+                }),
+              ),
+            ],
+          };
+        },
+      },
+      // Original World.cs: Build_4SpheresSideView
+      four: {
+        description:
+          "From Build_4SpheresSideView: the original four coloured spheres and grey ground plane.",
+        build: () => Build_4SpheresSideView(false),
+      },
+      // Original World.cs: Build_Reflective4SpheresSideView
+      fourMirror: {
+        description:
+          "From Build_Reflective4SpheresSideView: original positions and reflection coefficients, rendered with the browser shading model.",
+        build: () => Build_4SpheresSideView(true),
+      },
+      // Original World.cs: Build_Boxes
+      boxes: {
+        description:
+          "From Build_Boxes: original green and red boxes, ground plane and light. Wider framing reveals the rear box.",
+        build() {
+          return {
+            background: [0, 0.2, 0.4],
+            camera: {
+              eye: [2.75, 2, 10],
+              target: [0.5, 2, 0],
+              fov: 32,
+            },
+            lights: [
+              {
+                position: [-10, 20, 10],
+                intensity: 1.5,
+              },
+            ],
+            objects: [
+              createBox(
+                [0, 2, 0],
+                [2, 3, 2],
+                createMaterial([0, 0.8, 0.3], {
+                  ka: 0.5,
+                  kd: 0.6,
+                  ks: 0,
+                }),
+              ),
+              createBox(
+                [0.25, 2.75, -8],
+                [2.5, 4.5, 8],
+                createMaterial([1, 0, 0], {
+                  ka: 0.5,
+                  kd: 0.5,
+                  ks: 0,
+                }),
+              ),
+              createPlane(
+                0,
+                createMaterial([0.75, 0.75, 0.75], {
+                  ka: 0.25,
+                  kd: 0.5,
+                  ks: 0,
+                }),
+              ),
+            ],
+          };
+        },
+      },
+      // Original World.cs: Build_TOSHelix
+      helix: {
+        description:
+          "From Build_TOSHelix: all 44 tiny spheres and the original formula. Its very small vertical rise makes this look like a beaded ring; framing is tightened.",
+        build() {
+          const world = {
+            background: [0, 0, 0],
+            camera: {
+              eye: [10, 5, 40],
+              target: [0, 0, 0],
+              fov: 12,
+            },
+            lights: [
+              {
+                position: [1, 5, 30],
+                intensity: 1,
+              },
+            ],
+            objects: [],
+          };
+          for (let t = 1; t < 45; t++)
+            world.objects.push(
+              createSphere(
+                [3 * Math.sin(2 * t), (0.5 / 360) * t, 3 * Math.cos(2 * t)],
+                0.1,
+                createMaterial([0.5, 0.5, 0.5], {
+                  ka: 0.5,
+                  kd: 0.4,
+                  ks: 0.5,
+                  shininess: 250,
+                }),
+              ),
+            );
+          return world;
+        },
+      },
+      // Original World.cs: Build_TransparentSphere
+      glassOriginal: {
+        description:
+          "From Build_TransparentSphere: original glass and red sphere geometry, including the unusual 0.75 refractive index. Browser Fresnel shading differs from the C# original.",
+        build() {
+          return {
+            background: [0, 0.3, 0.25],
+            camera: {
+              eye: [-8, 5.5, 40],
+              target: [1, 4, 0],
+              fov: 19,
+            },
+            lights: [
+              {
+                position: [40, 50, 0],
+                intensity: 1.5,
+              },
+              {
+                position: [-10, 20, 10],
+                intensity: 1.5,
+              },
+              {
+                direction: [-1, 0, 0],
+                intensity: 1.5,
+              },
+            ],
+            objects: [
+              createSphere(
+                [0, 4.5, 0],
+                3,
+                createMaterial([0, 0, 0], {
+                  ka: 0,
+                  kd: 0,
+                  ks: 0.5,
+                  shininess: 2000,
+                  ior: 0.75,
+                  kr: 0.1,
+                  kt: 0.9,
+                }),
+              ),
+              createSphere(
+                [4, 4, -6],
+                3,
+                createMaterial([1, 0, 0], {
+                  ka: 0.3,
+                  kd: 0.3,
+                  ks: 0.5,
+                  shininess: 2000,
+                  kr: 0.25,
+                }),
+              ),
+              createPlane(0, grey()),
+            ],
+          };
+        },
+      },
+      dna: {
+        description:
+          "New: two coloured strands with silver rungs, suspended above a reflective floor. Try orbiting the camera.",
+        build() {
+          const world = stage([10, 6, 14], [0, 3.8, 0], 40);
+          for (let i = 0; i < 24; i++) {
+            const a = i * 0.43,
+              y = 0.55 + i * 0.28;
+            for (let side = 0; side < 2; side++) {
+              const b = a + side * Math.PI;
+              world.objects.push(
+                createSphere(
+                  [1.6 * Math.cos(b), y, 1.6 * Math.sin(b)],
+                  0.24,
+                  createMaterial(side ? [0.9, 0.18, 0.09] : [0.05, 0.55, 0.8], {
+                    kr: 0.22,
+                  }),
+                ),
+              );
+            }
+            if (i % 3 === 0)
+              for (let j = 1; j < 7; j++) {
+                const r = -1.6 + (j * 3.2) / 7;
+                world.objects.push(
+                  createSphere([r * Math.cos(a), y, r * Math.sin(a)], 0.1, chrome()),
+                );
+              }
+          }
+          return world;
+        },
+      },
+      city: {
+        description:
+          "New: a deterministic miniature skyline, coloured rooftops and wet-looking reflective ground. Buildings are generated identically on every visit.",
+        build() {
+          const world = stage([13, 11, 16], [0, 2, 0], 46);
+          world.lights = [
+            {
+              position: [-8, 12, 6],
+              color: [0.25, 0.6, 1],
+              intensity: 1.4,
+            },
+            {
+              position: [8, 8, -6],
+              color: [1, 0.25, 0.12],
+              intensity: 1.1,
+            },
+          ];
+          for (let x = -3; x <= 3; x++)
+            for (let z = -3; z <= 3; z++) {
+              const h = 0.8 + ((x * 17 + z * 31 + 200) % 13) * 0.29,
+                c = (x + z + 8) % 3;
+              world.objects.push(
+                createBox(
+                  [x * 1.4, h / 2, z * 1.4],
+                  [0.86, h, 0.86],
+                  createMaterial(
+                    [
+                      [0.13, 0.22, 0.32],
+                      [0.25, 0.3, 0.36],
+                      [0.16, 0.28, 0.27],
+                    ][c],
+                    {
+                      kr: 0.3,
+                    },
+                  ),
+                ),
+              );
+              world.objects.push(
+                createBox(
+                  [x * 1.4, h + 0.06, z * 1.4],
+                  [0.9, 0.12, 0.9],
+                  createMaterial(c === 0 ? [0.1, 0.6, 1] : [1, 0.3, 0.12], {
+                    ka: 0.7,
+                    kd: 0.4,
+                  }),
+                ),
+              );
+            }
+          return world;
+        },
+      },
+      orrery: {
+        description:
+          "New: a golden central sphere surrounded by three tilted rings of chrome beads and coloured satellites. Decorative orbital sculpture, not a scale solar-system model.",
+        build() {
+          const world = stage([10, 8, 14], [0, 3.4, 0], 44);
+          world.objects.push(
+            createSphere(
+              [0, 3.6, 0],
+              1.15,
+              createMaterial([0.85, 0.5, 0.09], {
+                kr: 0.35,
+              }),
+            ),
+          );
+          for (let ring = 0; ring < 3; ring++) {
+            const r = 2.1 + ring * 0.8,
+              tilt = (ring - 1) * 0.65;
+            for (let i = 0; i < 40; i++) {
+              const a = (i * Math.PI) / 20,
+                x = r * Math.cos(a),
+                z = r * Math.sin(a);
+              world.objects.push(
+                createSphere([x, 3.6 + z * Math.sin(tilt), z * Math.cos(tilt)], 0.065, chrome()),
+              );
+            }
+            const a = ring * 2.2 + 0.4,
+              z = r * Math.sin(a);
+            world.objects.push(
+              createSphere(
+                [r * Math.cos(a), 3.6 + z * Math.sin(tilt), z * Math.cos(tilt)],
+                0.35 + ring * 0.12,
+                createMaterial(
+                  [
+                    [0.1, 0.5, 0.8],
+                    [0.8, 0.2, 0.1],
+                    [0.15, 0.65, 0.3],
+                  ][ring],
+                  {
+                    kr: 0.25,
+                  },
+                ),
+              ),
+            );
+          }
+          return world;
+        },
+      },
+      temple: {
+        description:
+          "New: marble columns, stepped foundations and a glass centrepiece under a stone lintel.",
+        build() {
+          const world = stage([10, 7, 13], [0, 2, 0], 43),
+            stone = createMaterial([0.83, 0.8, 0.69], {
+              texture: "marble",
+              color2: [0.23, 0.28, 0.3],
+              scale: 1.8,
+              kr: 0.08,
+            });
+          world.objects.push(
+            createBox([0, 0.2, 0], [7, 0.4, 5], stone),
+            createBox([0, 0.55, 0], [6.2, 0.3, 4.2], stone),
+          );
+          for (const x of [-2.4, 2.4])
+            for (const z of [-1.5, 1.5]) {
+              world.objects.push(
+                {
+                  type: "cylinder",
+                  position: [x, 2.3, z],
+                  radius: 0.3,
+                  height: 3.2,
+                  material: stone,
+                },
+                createBox([x, 0.85, z], [0.85, 0.3, 0.85], stone),
+                createBox([x, 3.9, z], [0.85, 0.3, 0.85], stone),
+              );
+            }
+          world.objects.push(
+            createBox([0, 4.2, 0], [6.4, 0.45, 4.4], stone),
+            createSphere([0, 1.8, 0], 1, glass()),
+          );
+          return world;
+        },
+      },
+      rainbow: {
+        description:
+          "New: five glass lenses with different refractive indices in front of vivid coloured panels. Colours come from the panels, not simulated dispersion.",
+        build() {
+          const world = stage([7, 4.5, 13], [0, 1.4, 0], 43);
+          for (let i = 0; i < 5; i++) {
+            let x = (i - 2) * 1.65,
+              color = [
+                [0.8, 0.08, 0.1],
+                [0.95, 0.4, 0.04],
+                [0.85, 0.75, 0.08],
+                [0.06, 0.6, 0.3],
+                [0.08, 0.3, 0.85],
+              ][i];
+            world.objects.push(
+              createBox(
+                [x, 1.4, -1.3],
+                [1.5, 2.8, 0.2],
+                createMaterial(color, {
+                  ka: 0.25,
+                  kd: 0.7,
+                }),
+              ),
+              createSphere([x, 0.77, 0.35], 0.75, {
+                ...glass(),
+                ior: 1.15 + i * 0.18,
+              }),
+            );
+          }
+          return world;
+        },
+      },
+      pyramid: {
+        description:
+          "New: a four-tier stack of golden spheres on a dark checkerboard, with a single silver capstone.",
+        build() {
+          const world = stage([10, 7, 13], [0, 1.8, 0], 40);
+          world.objects[0].material = createMaterial([0.26, 0.28, 0.3], {
+            texture: "checker",
+            color2: [0.035, 0.045, 0.055],
+            scale: 1.5,
+            kr: 0.2,
+          });
+          for (let level = 0; level < 4; level++) {
+            const n = 4 - level;
+            for (let x = 0; x < n; x++)
+              for (let z = 0; z < n; z++)
+                world.objects.push(
+                  createSphere(
+                    [(x - (n - 1) / 2) * 1.35, 0.68 + level * 0.96, (z - (n - 1) / 2) * 1.35],
+                    0.67,
+                    level === 3
+                      ? chrome()
+                      : createMaterial([0.8, 0.48, 0.1], {
+                          kr: 0.42,
+                          ks: 0.6,
+                        }),
+                  ),
+                );
+          }
+          return world;
+        },
+      },
+    };
+    /* Build the selected world. Original Build_* names are documented at each scene. */
+    function buildWorld(buildFunction) {
+      if (EXTRA_SCENES[buildFunction]) return EXTRA_SCENES[buildFunction].build();
+      const floor = {
+        type: "plane",
+        position: [0, 0, 0],
+        normal: [0, 1, 0],
+        material: createMaterial([0.6, 0.66, 0.7], {
+          texture: "checker",
+          color2: [0.055, 0.075, 0.09],
+          scale: 1,
+          kr: 0.15,
+        }),
+      };
+      let world = {
+        background: [0.055, 0.085, 0.12],
+        camera: {
+          eye: [7, 4.5, 10],
+          target: [0, 1, 0],
+          fov: 40,
+        },
+        lights: [
+          {
+            position: [-3, 8, 5],
+            intensity: 0.85,
+          },
+          {
+            position: [5, 5, -4],
+            color: [0.55, 0.75, 1],
+            intensity: 0.5,
+          },
+        ],
+        objects: [floor],
+      };
+      if (buildFunction === "studio")
+        world.objects.push(
+          createSphere(
+            [-2, 1.2, 0],
+            1.2,
+            createMaterial([0.65, 0.8, 0.9], {
+              kr: 0.87,
+            }),
+          ),
+          createSphere(
+            [0.55, 1.35, 0.3],
+            1.35,
+            createMaterial([0.9, 0.98, 1], {
+              kt: 0.95,
+              ior: 1.5,
+              kd: 0.04,
+              ks: 0.4,
+            }),
+          ),
+          createSphere(
+            [2.4, 0.75, -1.3],
+            0.75,
+            createMaterial([0.8, 0.19, 0.07], {
+              kr: 0.18,
+            }),
+          ),
+          createSphere(
+            [-0.4, 0.5, -2.5],
+            0.5,
+            createMaterial([0.16, 0.65, 0.36], {
+              kr: 0.2,
+            }),
+          ),
+        );
+      if (buildFunction === "materials")
+        for (let i = 0; i < 3; i++)
+          world.objects.push(
+            createSphere(
+              [(i - 1) * 2.6, 1.15, 0],
+              1.15,
+              createMaterial(i === 2 ? [0.65, 0.28, 0.09] : [0.75, 0.85, 0.82], {
+                texture: ["checker", "marble", "wood"][i],
+                color2: [0.04, 0.12, 0.13],
+                scale: i === 0 ? 0.4 : 2,
+                kr: 0.15,
+              }),
+            ),
+          );
+      if (buildFunction === "geometry")
+        world.objects.push(
+          {
+            type: "box",
+            position: [-2, 1, 0],
+            size: [1.7, 2, 1.7],
+            material: createMaterial([0.12, 0.5, 0.45], {
+              kr: 0.25,
+            }),
+          },
+          {
+            type: "ellipsoid",
+            position: [0.3, 1.5, 0],
+            radii: [0.75, 1.5, 0.75],
+            material: createMaterial([0.75, 0.28, 0.1], {
+              kr: 0.3,
+            }),
+          },
+          {
+            type: "cylinder",
+            position: [2.4, 1, 0],
+            radius: 0.7,
+            height: 2,
+            material: createMaterial([0.5, 0.6, 0.8], {
+              kr: 0.5,
+            }),
+          },
+          {
+            type: "triangle",
+            vertices: [
+              [-1, 0.01, 2],
+              [1, 0.01, 2],
+              [0, 1.8, 2],
+            ],
+            material: createMaterial([0.7, 0.18, 0.3]),
+          },
+          {
+            type: "disc",
+            position: [0, 0.02, -2.2],
+            normal: [0, 1, 0],
+            radius: 1,
+            material: createMaterial([0.8, 0.7, 0.2]),
+          },
+        );
+      if (buildFunction === "spiral") {
+        world = {
+          background: [0, 0, 0],
+          camera: {
+            eye: [10, 5, 40],
+            target: [5.25, 5, 0],
+            fov: 50,
+          },
+          lights: [
+            {
+              position: [1, 5, 30],
+              intensity: 1,
+            },
+          ],
+          objects: [
+            {
+              type: "plane",
+              position: [0, 0, -12],
+              normal: [0, 0, 1],
+              material: createMaterial([0.5, 0.5, 0.3], {
+                ka: 0.25,
+                kd: 0.4,
+                ks: 0.2,
+                shininess: 400,
+              }),
+            },
+          ],
+        };
+        let radius = 0.5;
+        for (let n = 1; n < 200; n++) {
+          let angle = n * 0.1;
+          radius += angle * 0.01;
+          world.objects.push(
+            createSphere(
+              [5 + Math.cos(angle) * radius, 5 - Math.sin(angle) * radius, -6],
+              1.5,
+              createMaterial([n / 400, n / 200, n / 800], {
+                ka: 0.5,
+                kd: 0.4,
+                ks: 0.5,
+                shininess: 250,
+              }),
+            ),
+          );
+        }
+      }
+      return world;
+    }
+    function validateWorld(s) {
+      const fail = (m) => {
+          throw Error(m);
+        },
+        vec = (v) => Array.isArray(v) && v.length === 3 && v.every(Number.isFinite),
+        positive = (v) => Number.isFinite(v) && v > 0,
+        nonzero = (v) => vec(v) && Math.hypot(...v) > 1e-9;
+      if (
+        !s ||
+        !vec(s.background) ||
+        !s.camera ||
+        !vec(s.camera.eye) ||
+        !vec(s.camera.target) ||
+        !(s.camera.fov > 0 && s.camera.fov < 170)
+      )
+        fail("Invalid background or camera.");
+      const direction = s.camera.eye.map((v, i) => v - s.camera.target[i]),
+        up = s.camera.up || [0, 1, 0];
+      if (
+        !nonzero(direction) ||
+        !nonzero(up) ||
+        Math.hypot(
+          direction[1] * up[2] - direction[2] * up[1],
+          direction[2] * up[0] - direction[0] * up[2],
+          direction[0] * up[1] - direction[1] * up[0],
+        ) < 1e-8
+      )
+        fail("Camera eye, target and up must define a valid view.");
+      if (
+        !Array.isArray(s.objects) ||
+        s.objects.length > 500 ||
+        !Array.isArray(s.lights) ||
+        s.lights.length > 16
+      )
+        fail("Use at most 500 objects and 16 lights.");
+      for (const l of s.lights) {
+        if (
+          !(l.direction ? nonzero(l.direction) : vec(l.position)) ||
+          (l.color && !vec(l.color)) ||
+          (l.intensity !== undefined && (!Number.isFinite(l.intensity) || l.intensity < 0))
+        )
+          fail("Invalid light.");
+      }
+      for (const o of s.objects) {
+        if (
+          !["sphere", "ellipsoid", "plane", "box", "triangle", "disc", "cylinder"].includes(o.type)
+        )
+          fail("Unsupported object type: " + o.type);
+        if (o.type !== "triangle" && !vec(o.position)) fail("Object needs position [x,y,z].");
+        if (["sphere", "disc", "cylinder"].includes(o.type) && !positive(o.radius))
+          fail("Radius must be positive.");
+        if (o.type === "cylinder" && !positive(o.height)) fail("Height must be positive.");
+        if (["disc", "plane"].includes(o.type) && !nonzero(o.normal)) fail("Invalid normal.");
+        if (o.type === "ellipsoid" && (!vec(o.radii) || !o.radii.every(positive)))
+          fail("Invalid radii.");
+        if (o.type === "box" && (!vec(o.size) || !o.size.every(positive)))
+          fail("Invalid box size.");
+        if (
+          o.type === "triangle" &&
+          (!Array.isArray(o.vertices) || o.vertices.length !== 3 || !o.vertices.every(vec))
+        )
+          fail("Triangle needs three vertices.");
+        const m = o.material || {};
+        for (const key of ["color", "color2"])
+          if (m[key] && !vec(m[key])) fail("Invalid material colour.");
+        for (const key of ["ka", "kd", "ks", "kr", "kt"])
+          if (m[key] !== undefined && (!Number.isFinite(m[key]) || m[key] < 0 || m[key] > 1))
+            fail(key + " must be between 0 and 1.");
+        for (const key of ["ior", "scale", "shininess"])
+          if (m[key] !== undefined && !positive(m[key])) fail(key + " must be positive.");
+        if (m.texture && !["checker", "marble", "wood"].includes(m.texture))
+          fail("Unsupported texture.");
+      }
+      return s;
+    }
+    function stopRendering() {
+      if (renderWorker) {
+        renderWorker.terminate();
+        renderWorker = null;
+      }
+      getElement("stop").disabled = true;
+      getElement("render").disabled = false;
+    }
+    function renderScene() {
+      stopRendering();
+      try {
+        validateWorld(world);
+        const width = +getElement("resolution").value,
+          height = (width * 2) / 3;
+        canvas.width = width;
+        canvas.height = height;
+        getElement("save").disabled = true;
+        getElement("progress").value = 0;
+        const url = URL.createObjectURL(
+          new Blob([getElement("engine").textContent], {
+            type: "text/javascript",
+          }),
+        );
+        renderWorker = new Worker(url);
+        URL.revokeObjectURL(url);
+        getElement("stop").disabled = false;
+        getElement("render").disabled = true;
+        getElement("status").textContent = "Rendering…";
+        renderWorker.onmessage = ({ data: d }) => {
+          if (d.pixels) {
+            screenContext.putImageData(new ImageData(d.pixels, width, d.rows), 0, d.y);
+            getElement("progress").value = d.percent;
+            getElement("status").textContent = d.percent + "% · " + d.seconds.toFixed(1) + " s";
+          }
+          if (d.done) {
+            stopRendering();
+            getElement("save").disabled = false;
+            getElement("status").textContent =
+              width + " × " + height + " · " + d.seconds.toFixed(1) + " s";
+          }
+        };
+        renderWorker.onerror = (e) => {
+          stopRendering();
+          getElement("status").textContent = "Render failed: " + e.message;
+        };
+        renderWorker.postMessage({
+          scene: world,
+          width,
+          height,
+          samples: +getElement("samples").value,
+          depth: +getElement("depth").value,
+          orbit: +getElement("orbit").value,
+          zoom: +getElement("zoom").value / 100,
+        });
+      } catch (e) {
+        stopRendering();
+        getElement("status").textContent = e.message;
+      }
+    }
+    function selectBuildFunction() {
+      world = buildWorld(getElement("preset").value);
+      getElement("editor").value = JSON.stringify(world, null, 2);
+      getElement("sceneName").textContent = getElement("preset").selectedOptions[0].textContent;
+      getElement("sceneDescription").textContent =
+        EXTRA_SCENES[getElement("preset").value]?.description ||
+        (getElement("preset").value === "spiral"
+          ? "Original Build_TOSSpiral geometry, with wider camera framing."
+          : "Browser demonstration scene.");
+      getElement("orbit").value = 0;
+      getElement("zoom").value = 100;
+      getElement("orbitOut").textContent = "0°";
+      getElement("zoomOut").textContent = "100%";
+      renderScene();
+    }
+    function downloadFile(blob, name) {
+      const a = document.createElement("a"),
+        url = URL.createObjectURL(blob);
+      a.href = url;
+      a.download = name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+    getElement("preset").onchange = selectBuildFunction;
+    getElement("render").onclick = renderScene;
+    getElement("stop").onclick = () => {
+      stopRendering();
+      getElement("status").textContent = "Stopped — render again to restart.";
+    };
+    getElement("save").onclick = () => canvas.toBlob((b) => downloadFile(b, "SharpRay-render.png"));
+    for (const [id, suffix] of [
+      ["depth", ""],
+      ["orbit", "°"],
+      ["zoom", "%"],
+    ])
+      getElement(id).oninput = () =>
+        (getElement(id + "Out").textContent = getElement(id).value + suffix);
+    getElement("apply").onclick = () => {
+      try {
+        const next = validateWorld(JSON.parse(getElement("editor").value));
+        world = next;
+        getElement("sceneName").textContent = "Custom scene";
+        getElement("sceneDescription").textContent = "Custom scene from the JSON editor.";
+        renderScene();
+      } catch (e) {
+        getElement("status").textContent = "Scene error: " + e.message;
+      }
+    };
+    getElement("export").onclick = () =>
+      downloadFile(
+        new Blob([JSON.stringify(world, null, 2)], {
+          type: "application/json",
+        }),
+        "SharpRay-scene.json",
+      );
+    getElement("import").onclick = () => getElement("file").click();
+    getElement("file").onchange = async () => {
+      try {
+        const f = getElement("file").files[0];
+        if (!f) return;
+        if (f.size > 2000000) throw Error("Scene file exceeds 2 MB.");
+        const next = validateWorld(JSON.parse(await f.text()));
+        world = next;
+        getElement("editor").value = JSON.stringify(world, null, 2);
+        getElement("sceneName").textContent = f.name;
+        getElement("sceneDescription").textContent = "Imported JSON scene.";
+        renderScene();
+      } catch (e) {
+        getElement("status").textContent = "Import error: " + e.message;
+      }
+      getElement("file").value = "";
+    };
+    selectBuildFunction();
+  </script>
+</html>
