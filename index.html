@@ -1,17 +1,29 @@
 <!doctype html>
 <html lang="en">
-  <meta charset="utf-8" /><meta
-    name="viewport"
-    content="width=device-width,initial-scale=1"
-  /><title>SharpRay — browser ray tracer</title>
+  <!--
+  SharpRay browser edition — source guide
+
+  Styles: base controls, light theme, render layout, scene editor, surface protection.
+  Interface: render surface, scene selector, generator controls, Render Studio.
+  Embedded workers: mountain-generator, engine, obj-parser.
+  Application: scene builders, validation, rendering, import/generation, camera, editor.
+
+  Worker scripts are stored as plain text and launched through Blob URLs.
+  Keep this file self-contained so it can run offline without a build step.
+  Original SharpRay terminology, source comments and attributions are retained.
+-->
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MountainRay — browser ray tracer</title>
   <style>
+    /* Base typography, layout and shared controls. */
     :root {
       color-scheme: dark;
       font-family:
         Segoe UI,
         Arial,
         sans-serif;
-      background: #101418;
+      background: #242e39;
       color: #e6ecef;
     }
     * {
@@ -33,7 +45,7 @@
       letter-spacing: -1px;
     }
     h1 span {
-      color: #82dfb2;
+      color: #ff6868;
     }
     small,
     .muted {
@@ -71,21 +83,21 @@
       margin-top: 12px;
     }
     button:hover {
-      border-color: #82dfb2;
+      border-color: #ff6868;
     }
     button:disabled {
       opacity: 0.4;
       cursor: default;
     }
     .primary {
-      background: #82dfb2;
-      color: #10281d;
+      background: #b91c26;
+      color: #ffffff;
       font-weight: 700;
       border: 0;
     }
     input[type="range"] {
       width: 100%;
-      accent-color: #82dfb2;
+      accent-color: #ff6868;
     }
     .stage {
       padding: 28px;
@@ -110,7 +122,7 @@
     progress {
       width: 100%;
       height: 5px;
-      accent-color: #82dfb2;
+      accent-color: #ff6868;
     }
     details {
       margin-top: 20px;
@@ -136,12 +148,13 @@
     .tag {
       font-size: 11px;
       letter-spacing: 2px;
-      color: #82dfb2;
+      color: #ff6868;
     }
     a {
-      color: #82dfb2;
+      color: #ff6868;
     }
     #status {
+      color: #f3f6fa;
       white-space: pre-wrap;
     }
     @media (max-width: 750px) {
@@ -161,268 +174,662 @@
         display: none;
       }
     }
-    /* Light interface; the render canvas retains its dark backdrop. */
+    /* Lighter slate interface palette; the render canvas retains its black backdrop. */
     :root {
-      color-scheme: light;
-      background: #fff;
-      color: #202a31;
+      color-scheme: dark;
+      background: #2c3845;
+      color: #f3f6fa;
     }
     header {
-      background: #fff;
-      border-color: #d7dfe3;
+      background: #2c3845;
+      border-color: #596e80;
     }
     h1 span,
     .tag {
-      color: #14764e;
+      color: #ff6868;
     }
     small,
     .muted {
-      color: #52636e;
+      color: #c5d1dd;
     }
     aside {
-      background: #fff;
-      border-color: #d7dfe3;
+      background: #2c3845;
+      border-color: #596e80;
     }
     .stage {
-      background: #fff;
+      background: #2c3845;
     }
     label,
     details {
-      color: #435560;
+      color: #dde6ee;
     }
     select,
     button,
     textarea {
-      background: #fff;
-      color: #202a31;
-      border-color: #aebcc5;
+      background: #2c3845;
+      color: #f3f6fa;
+      border-color: #7a8e9f;
     }
     button:hover {
-      border-color: #14764e;
-      background: #f0f7f3;
+      border-color: #ff6868;
+      background: #62313a;
     }
     .primary {
-      background: #14764e;
-      color: #fff;
+      background: #b91c26;
+      color: #ffffff;
     }
     .primary:hover {
-      background: #105f3f;
-      color: #fff;
+      background: #cf242b;
+      color: #ffffff;
     }
     input[type="range"],
     progress {
-      accent-color: #14764e;
+      accent-color: #ff6868;
     }
     a {
-      color: #126c49;
+      color: #ff6868;
     }
     canvas {
       background: #000;
       border-color: #303a42;
     }
-  canvas { touch-action:none; cursor:grab; } canvas.dragging { cursor:grabbing; }
-
-    /* Full-width render, with scene and render controls below it. */
-    header { padding: 8px 16px; }
-    h1 { font-size: 23px; }
-    main { display:block; min-height:0; }
-    .stage { padding:12px 16px; }
-    .scene-panel { padding:16px 0; margin-top:12px; border:0; border-top:1px solid #d7dfe3; min-width:0; }
-    h2 { font-size:14px; margin:0 0 10px; }
-    h3 { font-size:14px; margin:16px 0 8px; }
-    .bar { margin-bottom:4px; }
-    #sceneDescription { margin:4px 0; font-size:12px!important; }
-    .view-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:6px 0; font-size:12px; }
-    #resetView { width:auto; margin:0; padding:5px 10px; }
-    canvas { width:100%; height:auto; max-height:none; aspect-ratio:3 / 2; }
-    .studio { margin-top:12px; padding-top:12px; border-top:1px solid #d7dfe3; }
-    .settings-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px 16px; }
-    label { margin:10px 0 5px; }
-    .settings-grid label { margin-top:0; }
-    input[type=number] { width:100%; padding:8px; border:1px solid #aebcc5; border-radius:6px; font:inherit; }
-    .render-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-    .render-actions > button { width:160px; }
-    .render-actions .row { flex:1; }
-    .render-actions p { flex-basis:100%; margin:0; }
-    [data-scene-panel][hidden] { display:none; }
-    #mountainControls p, #sceneControls p { font-size:12px; line-height:1.5; }
-    @media(max-width:800px) {
-      main { grid-template-columns:1fr; }
-      .scene-panel { border-left:0; border-top:1px solid #d7dfe3; }
-      .settings-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
-      header { padding:8px 16px; }
+    canvas {
+      touch-action: none;
+      cursor: grab;
     }
-    .render-info { padding-top:12px; }
-    #mountainControls { padding-top:20px; }
-    .scene-edit { margin:16px 0; padding:14px; border:1px solid #d7dfe3; border-radius:7px; }
-    .scene-edit > summary { font-weight:600; }
-    .scene-edit p { font-size:12px; }
-    .edit-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; }
-    .edit-group { min-width:0; border:1px solid #e1e7ea; border-radius:6px; padding:10px; margin:8px 0; }
-    .edit-group legend { font-size:13px; font-weight:600; }
-    .edit-vector { display:flex; gap:6px; }
-    .edit-vector label { flex:1; min-width:0; font-size:11px; }
-    .edit-vector input { min-width:0; }
-    .object-picker { display:flex; align-items:center; gap:10px; margin-top:12px; }
-    .object-picker input { max-width:110px; }
-    .scene-edit input:invalid { border-color:#b42318; }
-    .scene-edit input[type=color] { display:block; width:100%; max-width:240px; height:40px; margin-top:6px; padding:3px; border:1px solid #aebcc5; border-radius:6px; cursor:pointer; background:#fff; }
-</style>
+    canvas.dragging {
+      cursor: grabbing;
+    }
+    
+    /* Full-width render, with scene and render controls below it. */
+    header {
+      padding: 8px 16px;
+    }
+    h1 {
+      font-size: 23px;
+    }
+    main {
+      display: block;
+      min-height: 0;
+    }
+    .stage {
+      padding: 12px 16px;
+    }
+    .scene-panel {
+      padding: 16px 0;
+      margin-top: 12px;
+      border: 0;
+      border-top: 1px solid #596e80;
+      min-width: 0;
+    }
+    h2 {
+      font-size: 14px;
+      margin: 0 0 10px;
+    }
+    h3 {
+      font-size: 14px;
+      margin: 16px 0 8px;
+    }
+    .bar {
+      margin-bottom: 4px;
+    }
+    #sceneDescription {
+      margin: 4px 0;
+      font-size: 12px !important;
+    }
+    .view-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 6px 0;
+      font-size: 12px;
+    }
+    #resetView {
+      width: auto;
+      margin: 0;
+      padding: 5px 10px;
+    }
+    canvas {
+      width: 100%;
+      height: auto;
+      max-height: none;
+      aspect-ratio: 3 / 2;
+    }
+    .studio {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #596e80;
+    }
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px 16px;
+    }
+    label {
+      margin: 10px 0 5px;
+    }
+    .settings-grid label {
+      margin-top: 0;
+    }
+    input[type="number"] {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #7a8e9f;
+      border-radius: 6px;
+      font: inherit;
+    }
+    .render-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .render-actions > button {
+      width: 160px;
+    }
+    .render-actions .row {
+      flex: 1;
+    }
+    .render-actions p {
+      flex-basis: 100%;
+      margin: 0;
+    }
+    [data-scene-panel][hidden] {
+      display: none;
+    }
+    #mountainControls p,
+    #sceneControls p {
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    @media (max-width: 800px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+      .scene-panel {
+        border-left: 0;
+        border-top: 1px solid #596e80;
+      }
+      .settings-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      header {
+        padding: 8px 16px;
+      }
+    }
+    .render-info {
+      padding-top: 12px;
+    }
+    #mountainControls {
+      padding-top: 20px;
+    }
+    /* Scene editor: groups, vectors and colour inputs. */
+    .scene-edit {
+      margin: 16px 0;
+      padding: 14px;
+      border: 1px solid #596e80;
+      border-radius: 7px;
+    }
+    .scene-edit > summary {
+      font-weight: 600;
+    }
+    .scene-edit p {
+      font-size: 12px;
+    }
+    .edit-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+    }
+    .edit-group {
+      min-width: 0;
+      border: 1px solid #596e80;
+      border-radius: 6px;
+      padding: 10px;
+      margin: 8px 0;
+    }
+    .edit-group legend {
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .edit-vector {
+      display: flex;
+      gap: 6px;
+    }
+    .edit-vector label {
+      flex: 1;
+      min-width: 0;
+      font-size: 11px;
+    }
+    .edit-vector input {
+      min-width: 0;
+    }
+    .object-picker {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .object-picker input {
+      max-width: 110px;
+    }
+    .scene-edit input:invalid {
+      border-color: #ff8a80;
+    }
+    .scene-edit input[type="color"] {
+      display: block;
+      width: 100%;
+      max-width: 240px;
+      height: 40px;
+      margin-top: 6px;
+      padding: 3px;
+      border: 1px solid #7a8e9f;
+      border-radius: 6px;
+      cursor: pointer;
+      background: #2c3845;
+    }
+    
+    /* Render surface: progress overlay, animation and explicit camera unlock. */
+    .render-surface {
+      position: relative;
+      overflow: hidden;
+      border-radius: 9px;
+    }
+    .render-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+    }
+    .render-overlay[hidden],
+    #unlockSurface[hidden],
+    #renderActivity[hidden],
+    .camera-warning[hidden] {
+      display: none;
+    }
+    .render-badge {
+      position: relative;
+      z-index: 1;
+      background: #101b22e8;
+      color: #f3f6fa;
+      border: 1px solid #ffffff50;
+      border-radius: 8px;
+      padding: 12px 20px;
+      font-size: 14px;
+    }
+    .render-surface.is-rendering .render-overlay {
+      background: #06121b24;
+      z-index: 2;
+      box-shadow: inset 0 0 65px #e6192940;
+    }
+    .render-surface.is-rendering .render-badge {
+      border-color: #ef4646cc;
+      box-shadow: 0 0 28px #f0203059, 0 0 75px #db102d38;
+    }
+    /* Two luminous layers move over the image without changing rendered pixels. */
+    .render-surface.is-rendering::before {
+      content: "";
+      position: absolute;
+      inset: -20%;
+      z-index: 1;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse at 25% 35%, #ef17295c, transparent 45%),
+        radial-gradient(ellipse at 75% 65%, #cf1b244d, transparent 45%),
+        radial-gradient(ellipse at 55% 20%, #bd103c40, transparent 40%);
+      animation: render-aurora 7s ease-in-out infinite alternate;
+    }
+    .render-surface.is-rendering::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      background: linear-gradient(
+        115deg,
+        transparent 28%,
+        #e6192920 37%,
+        #ed24366b 43%,
+        #ff939399 48%,
+        #ffffffb3 49%,
+        #f54d4d80 51%,
+        #ce123c4d 57%,
+        transparent 68%
+      );
+      background-size: 250% 100%;
+      animation: render-sweep 4.5s ease-in-out infinite;
+    }
+    @keyframes render-sweep {
+      from {
+        background-position: 160% 0;
+      }
+      to {
+        background-position: -60% 0;
+      }
+    }
+    @keyframes render-aurora {
+      from {
+        transform: translate(-4%, 2%) rotate(-5deg);
+        opacity: 0.55;
+      }
+      to {
+        transform: translate(4%, -2%) rotate(5deg);
+        opacity: 1;
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .render-surface.is-rendering::before,
+      .render-surface.is-rendering::after {
+        animation: none;
+        opacity: 0.35;
+      }
+    }
+    #unlockSurface {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      border: 0;
+      background: transparent;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 18px;
+      color: white;
+    }
+    #unlockSurface span {
+      padding: 10px 16px;
+      border-radius: 7px;
+      background: #101b22df;
+      border: 1px solid #ffffff50;
+    }
+    #unlockSurface:focus-visible {
+      outline: 3px solid #f05252;
+      outline-offset: -5px;
+    }
+    .camera-warning {
+      margin: 8px 0;
+      padding: 10px 14px;
+      background: #30291b;
+      color: #f0d28d;
+      border: 1px solid #796139;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    /* Native inputs and editor groups use the same dark surfaces. */
+    body {
+      background: #242e39;
+    }
+    input[type="number"],
+    input[type="text"],
+    select,
+    textarea {
+      background: #3b4b5b;
+      color: #f3f6fa;
+      border-color: #7a8e9f;
+    }
+    input[type="checkbox"] {
+      accent-color: #ff6868;
+    }
+    .scene-edit {
+      background: #334250;
+    }
+    .edit-group {
+      background: #2c3845;
+    }
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    summary:focus-visible {
+      outline: 2px solid #f05252;
+      outline-offset: 3px;
+    }
+  </style>
   <header>
     <div>
-      
-      <h1>Sharp<span>Ray</span></h1>
+      <h1>Mountain<span>Ray</span></h1>
     </div>
     <small>Recursive ray tracing · entirely offline</small>
   </header>
   <main>
-
     <section class="stage">
-<canvas tabindex="0" id="canvas" width="900" height="600" aria-label="Ray-traced scene"></canvas
-      ><progress id="progress" max="100" value="0"></progress>
-<div class="render-info">
-      <div class="bar">
-        <span id="sceneName">Reflection & glass</span><span id="status" role="status">Ready</span>
+      <div id="renderSurface" class="render-surface">
+        <canvas
+          tabindex="0"
+          id="canvas"
+          width="900"
+          height="600"
+          aria-label="Ray-traced scene"
+        ></canvas>
+        <div id="renderOverlay" class="render-overlay">
+          <div id="renderActivity" role="status" class="render-badge">Ready to render</div>
+          <button
+            id="unlockSurface"
+            hidden
+            type="button"
+            aria-label="Unlock render surface for rotation and zoom"
+          >
+            <span>Render complete · Click to unlock mouse controls</span>
+          </button>
+        </div>
       </div>
-      <p id="sceneDescription" class="muted" style="font-size: 13px; line-height: 1.5"></p>
-      <div class="view-toolbar"><span class="muted">Drag to rotate · Scroll to zoom</span><button id="resetView">Reset view</button></div>
-</div>
-<aside class="scene-panel"><h2>Scene</h2><label for="preset">Scene</label
-      ><select id="preset">
-        <optgroup label="Browser favourites">
-          <option value="studio">Reflection & glass</option>
-          <option value="materials">Procedural materials</option>
-          <option value="geometry">Geometry collection</option>
-        </optgroup>
-        <optgroup label="Original SharpRay — adapted">
-          <option value="spiral">Tyranny of Spheres — spiral</option>
-          <option value="single">Single sphere · 2004</option>
-          <option value="four">Four spheres · 2004</option>
-          <option value="fourMirror">Reflective four spheres · 2004</option>
-          <option value="boxes">Boxes · 2004</option>
-          <option value="helix">Tyranny of Spheres — helix · 2004</option>
-          <option value="glassOriginal">Transparent sphere · 2004</option>
-        </optgroup>
-        <optgroup label="New compositions">
-          <option value="dna">Chromatic double helix</option>
-          <option value="city">Midnight miniature city</option>
-          <option value="orrery">Orbital clockwork</option>
-          <option value="temple">Marble temple</option>
-          <option value="rainbow">Spectrum of glass</option>
-          <option value="pyramid">The golden stack</option>
-        </optgroup><optgroup label="Create a scene"><option value="mountain">Mountain generator</option><option value="obj">Imported OBJ model</option></optgroup></select><div id="sceneControls" aria-live="polite"><section data-scene-panel="preset"><h3>Scene controls</h3><p class="muted">This preset is ready to render. Adjust quality and camera settings in Render Studio below the image, or edit scene values in Render Studio.</p></section><section data-scene-panel="obj" hidden><h3>OBJ model</h3><button id="objImport">Import OBJ model</button>
-      <input id="objFile" type="file" accept=".obj,text/plain" hidden />
-      <label for="objColour">OBJ surface colour</label>
-      <input id="objColour" type="color" value="#8daeca" aria-label="OBJ surface colour" />
-      <p class="muted" style="font-size: 12px; line-height: 1.5">
-        Import replaces the scene. Up to 20 MB / 50,000 triangles. Flat shading; MTL materials and
-        textures are not loaded. Models are centred and fitted automatically.
+      <p id="cameraWarning" class="camera-warning" role="status" hidden>
+        Mouse controls unlocked. Warning: rotating or zooming starts a new render and replaces this
+        image. Save PNG first if you want to keep it.
       </p>
-      </section><section id="mountainControls" data-scene-panel="mountain" hidden>
-        <h2>Mountain generator</h2>
-        <p class="muted">MountainGen-HTML terrain. Generate replaces the scene.</p>
-        <label for="mountainDetail">Subdivision detail</label>
-        <select id="mountainDetail">
-          <option value="2">2 · 16 triangles</option>
-          <option value="3">3 · 64 triangles</option>
-          <option value="4">4 · 256 triangles</option>
-          <option value="5" selected>5 · 1,024 triangles</option>
-          <option value="6">6 · 4,096 triangles</option>
-          <option value="7">7 · 16,384 triangles</option>
+      <progress id="progress" max="100" value="0"></progress>
+      <div class="render-info">
+        <div class="bar">
+          <span id="sceneName">Reflection & glass</span>
+          <span id="status" role="status">Ready</span>
+        </div>
+        <p id="sceneDescription" class="muted" style="font-size: 13px; line-height: 1.5"></p>
+        <div class="view-toolbar">
+          <span class="muted">
+            Click the completed image to unlock · Drag to rotate · Scroll to zoom
+          </span>
+          <button id="resetView">Reset view</button>
+        </div>
+      </div>
+      <aside class="scene-panel">
+        <h2>Scene</h2>
+        <label for="preset">Scene</label>
+        <select id="preset">
+          <optgroup label="Browser favourites">
+            <option value="studio">Reflection & glass</option>
+            <option value="materials">Procedural materials</option>
+            <option value="geometry">Geometry collection</option>
+          </optgroup>
+          <optgroup label="Original SharpRay — adapted">
+            <option value="spiral">Tyranny of Spheres — spiral</option>
+            <option value="single">Single sphere · 2004</option>
+            <option value="four">Four spheres · 2004</option>
+            <option value="fourMirror">Reflective four spheres · 2004</option>
+            <option value="boxes">Boxes · 2004</option>
+            <option value="helix">Tyranny of Spheres — helix · 2004</option>
+            <option value="glassOriginal">Transparent sphere · 2004</option>
+          </optgroup>
+          <optgroup label="New compositions">
+            <option value="dna">Chromatic double helix</option>
+            <option value="city">Midnight miniature city</option>
+            <option value="orrery">Orbital clockwork</option>
+            <option value="temple">Marble temple</option>
+            <option value="rainbow">Spectrum of glass</option>
+            <option value="pyramid">The golden stack</option>
+          </optgroup>
+          <optgroup label="Create a scene">
+            <option value="mountain">Mountain generator</option>
+            <option value="obj">Imported OBJ model</option>
+          </optgroup>
         </select>
-        <label for="mountainRoughness">Roughness (0.2–2.5)</label
-        ><input id="mountainRoughness" type="number" min="0.2" max="2.5" step="0.05" value="1" />
-        <label for="mountainSeed">Random seed</label
-        ><input
-          id="mountainSeed"
-          type="number"
-          min="-2147483648"
-          max="2147483647"
-          step="1"
-          value="2002"
-        />
-        <button id="mountainRandom">Randomize seed</button>
-        <label for="mountainPalette">Terrain palette</label
-        ><select id="mountainPalette">
-          <option>Alpine</option>
-          <option>Original 2002</option>
-          <option>Desert</option>
-          <option>Ice world</option>
-        </select>
-        <label for="mountainSnow">Snowline (%)</label
-        ><input id="mountainSnow" type="number" min="20" max="95" value="67" />
-        <label for="mountainWater"
-          ><input id="mountainWater" type="checkbox" checked style="width: auto" /> Reflective
-          water</label
-        >
-        <label for="mountainWaterLevel">Sea level (−90–120)</label
-        ><input id="mountainWaterLevel" type="number" min="-90" max="120" step="5" value="0" />
-        <button id="mountainGenerate">Generate mountain</button>
-        <p class="muted">
-          Same seed and settings reproduce the same landscape. Starts at draft quality; use Render
-          to increase quality.
-        </p>
+        <div id="sceneControls" aria-live="polite">
+          <section data-scene-panel="preset">
+            <h3>Scene controls</h3>
+            <p class="muted">
+              This preset is ready to render. Adjust quality and camera settings in Render Studio
+              below the image, or edit scene values in Render Studio.
+            </p>
+          </section>
+          <section data-scene-panel="obj" hidden>
+            <h3>OBJ model</h3>
+            <button id="objImport">Import OBJ model</button>
+            <input id="objFile" type="file" accept=".obj,text/plain" hidden />
+            <label for="objColour">OBJ surface colour</label>
+            <input id="objColour" type="color" value="#8daeca" aria-label="OBJ surface colour" />
+            <p class="muted" style="font-size: 12px; line-height: 1.5">
+              Import replaces the scene. Up to 20 MB / 50,000 triangles. Flat shading; MTL materials
+              and textures are not loaded. Models are centred and fitted automatically.
+            </p>
+          </section>
+          <section id="mountainControls" data-scene-panel="mountain" hidden>
+            <h2>Mountain generator</h2>
+            <p class="muted">MountainGen-HTML terrain. Generate replaces the scene.</p>
+            <label for="mountainDetail">Subdivision detail</label>
+            <select id="mountainDetail">
+              <option value="2">2 · 16 triangles</option>
+              <option value="3">3 · 64 triangles</option>
+              <option value="4">4 · 256 triangles</option>
+              <option value="5" selected>5 · 1,024 triangles</option>
+              <option value="6">6 · 4,096 triangles</option>
+              <option value="7">7 · 16,384 triangles</option>
+            </select>
+            <label for="mountainRoughness">Roughness (0.2–2.5)</label>
+            <input id="mountainRoughness" type="number" min="0.2" max="2.5" step="0.05" value="1" />
+            <label for="mountainSeed">Random seed</label>
+            <input
+              id="mountainSeed"
+              type="number"
+              min="-2147483648"
+              max="2147483647"
+              step="1"
+              value="2002"
+            />
+            <button id="mountainRandom">Randomize seed</button>
+            <label for="mountainPalette">Terrain palette</label>
+            <select id="mountainPalette">
+              <option>Alpine</option>
+              <option>Original 2002</option>
+              <option>Desert</option>
+              <option>Ice world</option>
+            </select>
+            <label for="mountainSnow">Snowline (%)</label>
+            <input id="mountainSnow" type="number" min="20" max="95" value="67" />
+            <label for="mountainWater">
+              <input id="mountainWater" type="checkbox" checked style="width: auto" />
+              Reflective water
+            </label>
+            <label for="mountainWaterLevel">Sea level (−90–120)</label>
+            <input id="mountainWaterLevel" type="number" min="-90" max="120" step="5" value="0" />
+            <button id="mountainGenerate">Generate mountain</button>
+            <p class="muted">
+              Same seed and settings reproduce the same landscape. Starts at draft quality; use
+              Render to increase quality.
+            </p>
+          </section>
+        </div>
+      </aside>
+      <section class="studio">
+        <h2>Render Studio</h2>
+        <div class="settings-grid">
+          <div class="control">
+            <label for="resolution">Resolution</label>
+            <select id="resolution">
+              <option value="480">Draft · 480 × 320</option>
+              <option value="900" selected>Standard · 900 × 600</option>
+              <option value="1500">Large · 1500 × 1000</option>
+            </select>
+          </div>
+          <div class="control">
+            <label for="samples">Anti-aliasing</label>
+            <select id="samples">
+              <option value="1">1 sample / pixel</option>
+              <option value="4" selected>4 samples / pixel</option>
+              <option value="9">9 samples / pixel</option>
+            </select>
+          </div>
+          <div class="control">
+            <label for="depth">
+              Reflection depth
+              <output id="depthOut">5</output>
+            </label>
+            <input id="depth" type="range" min="0" max="9" value="5" />
+          </div>
+          <div class="control">
+            <label for="orbit">
+              Camera orbit
+              <output id="orbitOut">0°</output>
+            </label>
+            <input id="orbit" type="range" min="-180" max="180" value="0" />
+          </div>
+          <div class="control">
+            <label for="zoom">
+              Camera distance
+              <output id="zoomOut">100%</output>
+            </label>
+            <input id="zoom" type="range" min="40" max="200" value="100" />
+          </div>
+        </div>
+        <details class="scene-edit">
+          <summary>Edit scene</summary>
+          <p class="muted">
+            Changes apply when you press Render scene. Selecting or generating a new scene replaces
+            these edits.
+          </p>
+          <div id="worldFields" class="edit-grid"></div>
+          <details>
+            <summary>Lights</summary>
+            <div id="lightFields"></div>
+          </details>
+          <details>
+            <summary>Objects &amp; materials</summary>
+            <div class="object-picker">
+              <label for="editObjectIndex">Object number</label>
+              <input id="editObjectIndex" type="number" min="1" step="1" value="1" />
+              <span id="editObjectCount"></span>
+            </div>
+            <p class="muted">
+              Select one object at a time, including individual triangles in imported models and
+              generated mountains.
+            </p>
+            <div id="objectFields" class="edit-grid"></div>
+          </details>
+          <p id="sceneEditStatus" role="status" class="muted"></p>
+        </details>
+        <div class="render-actions">
+          <button id="render" class="primary">Render scene</button>
+          <div class="row">
+            <button id="stop" disabled>Stop</button>
+            <button id="save" disabled>Save PNG</button>
+          </div>
+          <p class="muted" style="font-size: 12px; line-height: 1.6">
+            Change settings, then render. Rendering runs in a background worker so the interface
+            stays responsive.
+          </p>
+        </div>
       </section>
-</div></aside>
-<section class="studio"><h2>Render Studio</h2><div class="settings-grid"><div class="control"><label for="resolution">Resolution</label
-      ><select id="resolution">
-        <option value="480">Draft · 480 × 320</option>
-        <option value="900" selected>Standard · 900 × 600</option>
-        <option value="1500">Large · 1500 × 1000</option></select
-      ></div><div class="control"><label for="samples">Anti-aliasing</label
-      ><select id="samples">
-        <option value="1">1 sample / pixel</option>
-        <option value="4" selected>4 samples / pixel</option>
-        <option value="9">9 samples / pixel</option></select
-      ></div><div class="control"><label for="depth">Reflection depth <output id="depthOut">5</output></label
-      ><input id="depth" type="range" min="0" max="9" value="5" /></div><div class="control"><label for="orbit"
-        >Camera orbit <output id="orbitOut">0°</output></label
-      ><input id="orbit" type="range" min="-180" max="180" value="0" /></div><div class="control"><label for="zoom"
-        >Camera distance <output id="zoomOut">100%</output></label
-      ><input id="zoom" type="range" min="40" max="200" value="100" /></div></div><details class="scene-edit">
-<summary>Edit scene</summary>
-<p class="muted">Changes apply when you press Render scene. Selecting or generating a new scene replaces these edits.</p>
-<div id="worldFields" class="edit-grid"></div>
-<details><summary>Lights</summary><div id="lightFields"></div></details>
-<details><summary>Objects &amp; materials</summary>
-<div class="object-picker"><label for="editObjectIndex">Object number</label><input id="editObjectIndex" type="number" min="1" step="1" value="1"><span id="editObjectCount"></span></div>
-<p class="muted">Select one object at a time, including individual triangles in imported models and generated mountains.</p>
-<div id="objectFields" class="edit-grid"></div>
-</details>
-<p id="sceneEditStatus" role="status" class="muted"></p>
-</details>
-<div class="render-actions"><button
-        id="render"
-        class="primary"
-      >
-        Render scene
-      </button>
-      <div class="row">
-        <button id="stop" disabled>Stop</button><button id="save" disabled>Save PNG</button>
-      </div>
-      <p class="muted" style="font-size: 12px; line-height: 1.6">
-        Change settings, then render. Rendering runs in a background worker so the interface stays
-        responsive.
-      </p>
-    </div></section>
       <details>
         <summary>About this adaptation & supported features</summary>
         <p>
-          Based on <a href="https://github.com/Agmash29a/SharpRay">SharpRay</a>, © 2004 Riley T.
-          Perry — Chillers of Entropy. JavaScript adaptation of the sphere intersection, closest-hit
-          world traversal, pinhole camera, Phong lighting, checkerboard, recursive reflection and
-          Snell refraction logic. Seven adapted original scenes preserve their source geometry;
-          framing and shading may differ. Each scene has a provenance note above the render. Six new
-          compositions join the three browser favourites.
+          Based on
+          <a href="https://github.com/Agmash29a/SharpRay">SharpRay</a>
+          , © 2004 Riley T. Perry — Chillers of Entropy. JavaScript adaptation of the sphere
+          intersection, closest-hit world traversal, pinhole camera, Phong lighting, checkerboard,
+          recursive reflection and Snell refraction logic. Seven adapted original scenes preserve
+          their source geometry; framing and shading may differ. Each scene has a provenance note
+          above the render. Six new compositions join the three browser favourites.
         </p>
         <p>
           Includes spheres, ellipsoids, planes, boxes, triangles, discs and open cylinders;
           point/directional lights; checker, marble and wood textures. New browser conveniences
-          include orbit controls, PNG export and editable scene controls. Noise textures and glass Fresnel
-          blending are new approximations. This is a core adaptation, not a complete port: legacy
-          PLY loading, torus quartics, transformed instances, image textures and the full original
-          scene catalogue are not included. Glass casts opaque shadows; no caustics or global
-          illumination.
+          include orbit controls, PNG export and editable scene controls. Noise textures and glass
+          Fresnel blending are new approximations. This is a core adaptation, not a complete port:
+          legacy PLY loading, torus quartics, transformed instances, image textures and the full
+          original scene catalogue are not included. Glass casts opaque shadows; no caustics or
+          global illumination.
         </p>
         <p>
           Open this HTML directly in a current desktop browser. No server, installation, internet or
@@ -430,7 +837,6 @@
         </p>
       </details>
     </section>
-
   </main>
   <script id="mountain-generator" type="text/plain">
     
@@ -458,7 +864,7 @@
       n ^= n >>> 16;
       return (n >>> 0) / 4294967296;
     }
-    
+
     class TerrainGenerator {
       Generate(request) {
         const { detailLevel, seed, roughness } = request;
@@ -535,7 +941,7 @@
         };
       }
     }
-    
+
     // MountainGen-HTML surface zoning, adapted to SharpRay materials.
     // Preserve height/slope/seed decisions; SharpRay computes illumination and shadows.
     function makeTerrainGeometry(terrain, request) {
@@ -631,7 +1037,6 @@
         objects: makeTerrainGeometry(terrain, request),
       };
     }
-    
   
   </script>
   <script id="engine" type="text/plain">
@@ -642,7 +1047,7 @@
     // Ray.o and Ray.d are passed as rayOrigin and rayDirection.
     // World.worldObjects / worldLights are stored as JSON objects / lights.
     // Preserve those JSON field names so previously exported scenes still load.
-    
+
     // Adapted from SharpRay by Riley T. Perry (2004), commit 8b16f787edd2bf5595f8b37c2ab01fd54b59002a.
     const addVectors = (a, b) => a.map((v, i) => v + b[i]),
       subtractVectors = (a, b) => a.map((v, i) => v - b[i]),
@@ -845,7 +1250,7 @@
       }
       return true;
     }
-    
+
     function hitObjects(rayOrigin, rayDirection, worldObjects, minDistance = Infinity) {
       let shading = null;
       for (const obj of worldObjects.analyticObjects || worldObjects) {
@@ -1052,11 +1457,20 @@
         orbitAngle = (orbit * Math.PI) / 180,
         distance = Math.hypot(...eyeOffset),
         // MountainGen-style spherical orbit: clamp pitch to avoid flipping at the poles.
-        pitch = Math.max(-Math.PI / 2 + 0.02, Math.min(Math.PI / 2 - 0.02,
-          Math.atan2(eyeOffset[1], Math.hypot(eyeOffset[0], eyeOffset[2])) + elevation * Math.PI / 180)),
+        pitch = Math.max(
+          -Math.PI / 2 + 0.02,
+          Math.min(
+            Math.PI / 2 - 0.02,
+            Math.atan2(eyeOffset[1], Math.hypot(eyeOffset[0], eyeOffset[2])) +
+              (elevation * Math.PI) / 180,
+          ),
+        ),
         azimuth = Math.atan2(eyeOffset[0], eyeOffset[2]) + orbitAngle,
-        e = addVectors(lookat, [distance * Math.cos(pitch) * Math.sin(azimuth),
-          distance * Math.sin(pitch), distance * Math.cos(pitch) * Math.cos(azimuth)]),
+        e = addVectors(lookat, [
+          distance * Math.cos(pitch) * Math.sin(azimuth),
+          distance * Math.sin(pitch),
+          distance * Math.cos(pitch) * Math.cos(azimuth),
+        ]),
         w = normalise(subtractVectors(e, lookat)),
         u = normalise(crossProduct(camera.up || [0, 1, 0], w)),
         v = crossProduct(w, u);
@@ -1134,7 +1548,6 @@
         seconds: (Date.now() - renderStart) / 1000,
       });
     };
-    
   
   </script>
   <script id="obj-parser" type="text/plain">
@@ -1313,21 +1726,28 @@
       if (skipped) warnings.add(`Skipped ${skipped} degenerate faces or fragments.`);
       return { triangles, vertexCount: used.size, faceCount: faces.length, warnings: [...warnings] };
     }
-    
   
   </script>
   <script>
+    
     // Browser interface and scene builders. No C# UI code runs in the browser.
     // Material JSON: color maps to cd; shininess maps to n.
     // Camera JSON: eye maps to e; target maps to l.
 
     "use strict";
 
+    // -------------------------------------------------------------------------
+    // DOM references and application state
+    // -------------------------------------------------------------------------
     const getElement = (id) => document.getElementById(id),
       canvas = getElement("canvas"),
       screenContext = canvas.getContext("2d");
     let renderWorker = null,
       world;
+
+    // -------------------------------------------------------------------------
+    // Shared material and geometry factories
+    // -------------------------------------------------------------------------
     const createMaterial = (color, extra = {}) => ({
       color,
       ...extra,
@@ -1458,6 +1878,10 @@
       );
       return s;
     }
+
+    // -------------------------------------------------------------------------
+    // Additional scene presets
+    // -------------------------------------------------------------------------
     const EXTRA_SCENES = {
       // Original World.cs: Build_SingleSphere
       single: {
@@ -1663,9 +2087,7 @@
             if (i % 3 === 0)
               for (let j = 1; j < 7; j++) {
                 const r = -1.6 + (j * 3.2) / 7;
-                world.objects.push(
-                  createSphere([r * Math.cos(a), y, r * Math.sin(a)], 0.1, chrome()),
-                );
+                world.objects.push(createSphere([r * Math.cos(a), y, r * Math.sin(a)], 0.1, chrome()));
               }
           }
           return world;
@@ -2043,6 +2465,10 @@
       }
       return world;
     }
+
+    // -------------------------------------------------------------------------
+    // Scene validation
+    // -------------------------------------------------------------------------
     function validateWorld(s) {
       const fail = (m) => {
           throw Error(m);
@@ -2087,9 +2513,7 @@
           fail("Invalid light.");
       }
       for (const o of s.objects) {
-        if (
-          !["sphere", "ellipsoid", "plane", "box", "triangle", "disc", "cylinder"].includes(o.type)
-        )
+        if (!["sphere", "ellipsoid", "plane", "box", "triangle", "disc", "cylinder"].includes(o.type))
           fail("Unsupported object type: " + o.type);
         if (o.type !== "triangle" && !vec(o.position)) fail("Object needs position [x,y,z].");
         if (["sphere", "disc", "cylinder"].includes(o.type) && !positive(o.radius))
@@ -2098,8 +2522,7 @@
         if (["disc", "plane"].includes(o.type) && !nonzero(o.normal)) fail("Invalid normal.");
         if (o.type === "ellipsoid" && (!vec(o.radii) || !o.radii.every(positive)))
           fail("Invalid radii.");
-        if (o.type === "box" && (!vec(o.size) || !o.size.every(positive)))
-          fail("Invalid box size.");
+        if (o.type === "box" && (!vec(o.size) || !o.size.every(positive))) fail("Invalid box size.");
         if (
           o.type === "triangle" &&
           (!Array.isArray(o.vertices) || o.vertices.length !== 3 || !o.vertices.every(vec))
@@ -2118,24 +2541,51 @@
       }
       return s;
     }
-    let cameraElevation = 0, previewTimer = null, qualityTimer = null;
-    // Only a completed render unlocks camera gestures and controls.
-    let cameraReady = false;
+
+    // -------------------------------------------------------------------------
+    // Render lifecycle and surface protection
+    // -------------------------------------------------------------------------
+    let cameraElevation = 0,
+      previewTimer = null,
+      qualityTimer = null;
+    // A completed render stays protected until the user explicitly unlocks it.
+    let cameraReady = false,
+      completedRender = false;
+    function showRenderProtection(state, message) {
+      const surface = getElement("renderSurface");
+      surface.classList.toggle("is-rendering", state === "rendering");
+      surface.setAttribute("aria-busy", String(state === "rendering"));
+      getElement("renderOverlay").hidden = false;
+      getElement("unlockSurface").hidden = state !== "complete";
+      getElement("renderActivity").hidden = state === "complete";
+      getElement("renderActivity").textContent = message;
+      getElement("cameraWarning").hidden = true;
+      completedRender = state === "complete";
+    }
+    getElement("unlockSurface").onclick = () => {
+      if (!completedRender || renderWorker) return;
+      getElement("cameraWarning").hidden = false;
+      getElement("renderOverlay").hidden = true;
+      setCameraReady(true);
+      canvas.focus({ preventScroll: true });
+    };
     function setCameraReady(ready) {
       cameraReady = ready;
-      for (const id of ['orbit', 'zoom', 'resetView']) getElement(id).disabled = !ready;
-      canvas.style.cursor = ready ? 'grab' : 'default';
+      for (const id of ["orbit", "zoom", "resetView"]) getElement(id).disabled = !ready;
+      canvas.style.cursor = ready ? "grab" : "default";
       if (!ready && drag) {
         const pointerId = drag.id;
         drag = null;
-        canvas.classList.remove('dragging');
+        canvas.classList.remove("dragging");
         if (canvas.hasPointerCapture(pointerId)) canvas.releasePointerCapture(pointerId);
       }
     }
     function stopRendering(cancelView = true) {
       setCameraReady(false);
+      showRenderProtection("idle", "Surface locked — render to enable mouse controls.");
       if (cancelView) {
-        clearTimeout(previewTimer); clearTimeout(qualityTimer);
+        clearTimeout(previewTimer);
+        clearTimeout(qualityTimer);
         previewTimer = qualityTimer = null;
       }
       cancelOBJImport();
@@ -2167,15 +2617,18 @@
         getElement("stop").disabled = false;
         getElement("render").disabled = true;
         getElement("status").textContent = "Rendering…";
+        showRenderProtection("rendering", "Rendering… 0%");
         renderWorker.onmessage = ({ data: d }) => {
           if (d.pixels) {
             screenContext.putImageData(new ImageData(d.pixels, width, d.rows), 0, d.y);
             getElement("progress").value = d.percent;
             getElement("status").textContent = d.percent + "% · " + d.seconds.toFixed(1) + " s";
+            getElement("renderActivity").textContent =
+              "Rendering… " + d.percent + "% · " + d.seconds.toFixed(1) + " s";
           }
           if (d.done) {
             stopRendering(false);
-            setCameraReady(true);
+            showRenderProtection("complete", "Render complete");
             getElement("save").disabled = false;
             getElement("status").textContent =
               width + " × " + height + " · " + d.seconds.toFixed(1) + " s";
@@ -2184,6 +2637,7 @@
         renderWorker.onerror = (e) => {
           stopRendering();
           getElement("status").textContent = "Render failed: " + e.message;
+          showRenderProtection("idle", "Render failed — adjust settings and render again.");
         };
         renderWorker.postMessage({
           scene: world,
@@ -2201,23 +2655,23 @@
       }
     }
     // New scene types can register a panel here without changing the layout.
-    const sceneControlPanels = { mountain: 'mountain', obj: 'obj' };
+    const sceneControlPanels = { mountain: "mountain", obj: "obj" };
     function showSceneControls(sceneType) {
-      const panel = sceneControlPanels[sceneType] || 'preset';
-      document.querySelectorAll('[data-scene-panel]').forEach(section => {
+      const panel = sceneControlPanels[sceneType] || "preset";
+      document.querySelectorAll("[data-scene-panel]").forEach((section) => {
         section.hidden = section.dataset.scenePanel !== panel;
       });
     }
     function selectBuildFunction() {
       stopRendering();
-      const sceneType = getElement('preset').value;
+      const sceneType = getElement("preset").value;
       showSceneControls(sceneType);
-      if (sceneType === 'mountain') {
-        getElement('mountainGenerate').click();
+      if (sceneType === "mountain") {
+        getElement("mountainGenerate").click();
         return;
       }
-      if (sceneType === 'obj') {
-        getElement('status').textContent = 'Choose an OBJ file to replace the current scene.';
+      if (sceneType === "obj") {
+        getElement("status").textContent = "Choose an OBJ file to replace the current scene.";
         return;
       }
       world = buildWorld(getElement("preset").value);
@@ -2235,6 +2689,10 @@
       getElement("zoomOut").textContent = "100%";
       renderScene();
     }
+
+    // -------------------------------------------------------------------------
+    // Render buttons and image downloads
+    // -------------------------------------------------------------------------
     function downloadFile(blob, name) {
       const a = document.createElement("a"),
         url = URL.createObjectURL(blob);
@@ -2248,11 +2706,11 @@
       try {
         const next = validateWorld(structuredClone(sceneDraft));
         world = next;
-        getElement('sceneEditStatus').textContent = 'Scene values applied.';
+        getElement("sceneEditStatus").textContent = "Scene values applied.";
         stopRendering();
         renderScene();
       } catch (error) {
-        getElement('sceneEditStatus').textContent = 'Please correct the scene values: ' + error.message;
+        getElement("sceneEditStatus").textContent = "Please correct the scene values: " + error.message;
       }
     };
     getElement("stop").onclick = () => {
@@ -2269,6 +2727,10 @@
         (getElement(id + "Out").textContent = getElement(id).value + suffix);
     // OBJ import runs in its own worker and is cancelled by Stop or scene changes.
     // Keep the current world until parsing and validation succeed.
+
+    // -------------------------------------------------------------------------
+    // OBJ import lifecycle
+    // -------------------------------------------------------------------------
     let objImportWorker = null;
     function cancelOBJImport() {
       if (objImportWorker) objImportWorker.terminate();
@@ -2335,7 +2797,7 @@
           getElement("preset").value = "obj";
           showSceneControls("obj");
           cameraElevation = 0;
-      getElement("orbit").value = 0;
+          getElement("orbit").value = 0;
           getElement("orbitOut").textContent = "0°";
           getElement("zoom").value = 100;
           getElement("zoomOut").textContent = "100%";
@@ -2356,6 +2818,10 @@
     };
 
     // Generate off the UI thread. Stop, imports and scene changes cancel pending work.
+
+    // -------------------------------------------------------------------------
+    // Mountain generation lifecycle
+    // -------------------------------------------------------------------------
     let mountainWorker = null;
     function cancelMountainGeneration() {
       if (mountainWorker) mountainWorker.terminate();
@@ -2411,7 +2877,7 @@
           getElement("preset").value = "mountain";
           showSceneControls("mountain");
           cameraElevation = 0;
-      getElement("orbit").value = 0;
+          getElement("orbit").value = 0;
           getElement("orbitOut").textContent = "0°";
           getElement("zoom").value = 100;
           getElement("zoomOut").textContent = "100%";
@@ -2429,175 +2895,293 @@
       worker.postMessage(request);
     };
 
-
     // Apply camera changes only after a completed render. Render once the
     // gesture ends, rather than repeatedly interrupting an active render.
+
+    // -------------------------------------------------------------------------
+    // Camera gestures
+    // -------------------------------------------------------------------------
     let drag = null;
     function updateViewControls() {
-      getElement('orbitOut').textContent = getElement('orbit').value + '°';
-      getElement('zoomOut').textContent = getElement('zoom').value + '%';
+      getElement("orbitOut").textContent = getElement("orbit").value + "°";
+      getElement("zoomOut").textContent = getElement("zoom").value + "%";
     }
     function scheduleViewRender(finish = true) {
       if (!cameraReady) return;
       clearTimeout(qualityTimer);
       qualityTimer = null;
       updateViewControls();
-      if (finish) qualityTimer = setTimeout(() => {
-        qualityTimer = null;
-        if (cameraReady) renderScene();
-      }, 200);
+      if (finish)
+        qualityTimer = setTimeout(() => {
+          qualityTimer = null;
+          if (cameraReady) renderScene();
+        }, 200);
     }
-    canvas.addEventListener('pointerdown', event => {
-      if(!cameraReady || event.button !== 0 || drag) return;
-      clearTimeout(qualityTimer); qualityTimer = null;
-      drag = {id:event.pointerId,x:event.clientX,y:event.clientY};
+    canvas.addEventListener("pointerdown", (event) => {
+      if (!cameraReady || event.button !== 0 || drag) return;
+      clearTimeout(qualityTimer);
+      qualityTimer = null;
+      drag = { id: event.pointerId, x: event.clientX, y: event.clientY };
       canvas.setPointerCapture(event.pointerId);
-      canvas.classList.add('dragging');
+      canvas.classList.add("dragging");
     });
-    canvas.addEventListener('pointermove', event => {
-      if(!cameraReady || !drag || drag.id !== event.pointerId) return;
-      const dx=event.clientX-drag.x, dy=event.clientY-drag.y;
-      drag.x=event.clientX; drag.y=event.clientY;
-      getElement('orbit').value = ((+getElement('orbit').value + dx*0.5 + 540) % 360)-180;
-      const eye=world.camera.eye, target=world.camera.target;
-      const base=Math.atan2(eye[1]-target[1],Math.hypot(eye[0]-target[0],eye[2]-target[2]))*180/Math.PI;
-      cameraElevation=Math.max(-89-base,Math.min(89-base,cameraElevation+dy*0.4));
+    canvas.addEventListener("pointermove", (event) => {
+      if (!cameraReady || !drag || drag.id !== event.pointerId) return;
+      const dx = event.clientX - drag.x,
+        dy = event.clientY - drag.y;
+      drag.x = event.clientX;
+      drag.y = event.clientY;
+      getElement("orbit").value = ((+getElement("orbit").value + dx * 0.5 + 540) % 360) - 180;
+      const eye = world.camera.eye,
+        target = world.camera.target;
+      const base =
+        (Math.atan2(eye[1] - target[1], Math.hypot(eye[0] - target[0], eye[2] - target[2])) * 180) /
+        Math.PI;
+      cameraElevation = Math.max(-89 - base, Math.min(89 - base, cameraElevation + dy * 0.4));
       scheduleViewRender(false);
     });
     function finishDrag(event) {
-      if(!cameraReady || !drag || drag.id !== event.pointerId) return;
-      drag=null; canvas.classList.remove('dragging');
-      if(canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+      if (!cameraReady || !drag || drag.id !== event.pointerId) return;
+      drag = null;
+      canvas.classList.remove("dragging");
+      if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
       scheduleViewRender();
     }
-    canvas.addEventListener('pointerup',finishDrag);
-    canvas.addEventListener('pointercancel',finishDrag);
-    canvas.addEventListener('lostpointercapture',finishDrag);
-    canvas.addEventListener('wheel',event=>{
-      event.preventDefault();
-      if (!cameraReady) return;
-      const delta=event.deltaY*(event.deltaMode===1?16:event.deltaMode===2?canvas.clientHeight:1);
-      const zoom=getElement('zoom');
-      zoom.value=Math.round(Math.max(+zoom.min,Math.min(+zoom.max,+zoom.value*Math.exp(delta*0.001))));
-      scheduleViewRender();
-    },{passive:false});
+    canvas.addEventListener("pointerup", finishDrag);
+    canvas.addEventListener("pointercancel", finishDrag);
+    canvas.addEventListener("lostpointercapture", finishDrag);
+    canvas.addEventListener(
+      "wheel",
+      (event) => {
+        if (!cameraReady) return;
+        event.preventDefault();
+        const delta =
+          event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? canvas.clientHeight : 1);
+        const zoom = getElement("zoom");
+        zoom.value = Math.round(
+          Math.max(+zoom.min, Math.min(+zoom.max, +zoom.value * Math.exp(delta * 0.001))),
+        );
+        scheduleViewRender();
+      },
+      { passive: false },
+    );
     function resetView() {
       if (!cameraReady) return;
-      stopRendering(); cameraElevation=0;
-      getElement('orbit').value=0; getElement('zoom').value=100;
-      updateViewControls(); renderScene();
+      stopRendering();
+      cameraElevation = 0;
+      getElement("orbit").value = 0;
+      getElement("zoom").value = 100;
+      updateViewControls();
+      renderScene();
     }
-    canvas.addEventListener('dblclick',resetView);
-    getElement('resetView').onclick=resetView;
-    for(const id of ['orbit','zoom']) {
-      getElement(id).addEventListener('input',()=>scheduleViewRender());
+    canvas.addEventListener("dblclick", resetView);
+    getElement("resetView").onclick = resetView;
+    for (const id of ["orbit", "zoom"]) {
+      getElement(id).addEventListener("input", () => scheduleViewRender());
     }
-
 
     // A separate draft keeps edits out of the active render until Render scene.
     // Only the selected object's fields are mounted, even for large terrain meshes.
+
+    // -------------------------------------------------------------------------
+    // Scene editor: draft state and generated form controls
+    // -------------------------------------------------------------------------
     let sceneDraft = null;
     const editLabels = {
-      background:'Background colour', eye:'Camera position', target:'Look-at point', up:'Up vector',
-      fov:'Field of view (degrees)', position:'Position', direction:'Direction', color:'Colour (RGB)',
-      color2:'Secondary colour (RGB)', intensity:'Intensity', radius:'Radius', radii:'Radii',
-      size:'Size', height:'Height', normal:'Surface normal', vertices:'Triangle vertices',
-      ka:'Ambient (ka)', kd:'Diffuse (kd)', ks:'Specular (ks)', kr:'Reflection (kr)',
-      kt:'Transmission (kt)', ior:'Refractive index (ior)', shininess:'Shininess',
-      scale:'Texture scale', texture:'Texture', material:'Material', camera:'Camera'
+      background: "Background colour",
+      eye: "Camera position",
+      target: "Look-at point",
+      up: "Up vector",
+      fov: "Field of view (degrees)",
+      position: "Position",
+      direction: "Direction",
+      color: "Colour (RGB)",
+      color2: "Secondary colour (RGB)",
+      intensity: "Intensity",
+      radius: "Radius",
+      radii: "Radii",
+      size: "Size",
+      height: "Height",
+      normal: "Surface normal",
+      vertices: "Triangle vertices",
+      ka: "Ambient (ka)",
+      kd: "Diffuse (kd)",
+      ks: "Specular (ks)",
+      kr: "Reflection (kr)",
+      kt: "Transmission (kt)",
+      ior: "Refractive index (ior)",
+      shininess: "Shininess",
+      scale: "Texture scale",
+      texture: "Texture",
+      material: "Material",
+      camera: "Camera",
     };
     function editGroup(parent, title) {
-      const group = document.createElement('fieldset');
-      group.className = 'edit-group';
-      const legend = document.createElement('legend'); legend.textContent = title;
-      group.append(legend); parent.append(group); return group;
+      const group = document.createElement("fieldset");
+      group.className = "edit-group";
+      const legend = document.createElement("legend");
+      legend.textContent = title;
+      group.append(legend);
+      parent.append(group);
+      return group;
     }
     function editField(parent, owner, key, title = editLabels[key] || key) {
       const value = owner[key];
       // Convert the renderer's 0–1 RGB arrays only when the picker is edited.
       // Untouched colours retain their original precision in the scene draft.
-      if (['background', 'color', 'color2'].includes(key) && Array.isArray(value)) {
-        const label = document.createElement('label');
-        label.append(document.createTextNode(title.replace(' (RGB)', '')));
-        const input = document.createElement('input');
-        input.type = 'color';
-        input.value = '#' + value.map(channel =>
-          Math.round(Math.max(0, Math.min(1, channel)) * 255).toString(16).padStart(2, '0')
-        ).join('');
-        input.addEventListener('input', () => {
-          owner[key] = [1, 3, 5].map(start => parseInt(input.value.slice(start, start + 2), 16) / 255);
-          getElement('sceneEditStatus').textContent = 'Unapplied changes — press Render scene.';
+      if (["background", "color", "color2"].includes(key) && Array.isArray(value)) {
+        const label = document.createElement("label");
+        label.append(document.createTextNode(title.replace(" (RGB)", "")));
+        const input = document.createElement("input");
+        input.type = "color";
+        input.value =
+          "#" +
+          value
+            .map((channel) =>
+              Math.round(Math.max(0, Math.min(1, channel)) * 255)
+                .toString(16)
+                .padStart(2, "0"),
+            )
+            .join("");
+        input.addEventListener("input", () => {
+          owner[key] = [1, 3, 5].map(
+            (start) => parseInt(input.value.slice(start, start + 2), 16) / 255,
+          );
+          getElement("sceneEditStatus").textContent = "Unapplied changes — press Render scene.";
         });
-        label.append(input); parent.append(label);
+        label.append(input);
+        parent.append(label);
         return;
       }
-      if (Array.isArray(value) && value.every(n => typeof n === 'number')) {
-        const group = editGroup(parent, title), row = document.createElement('div');
-        row.className = 'edit-vector'; group.append(row);
-        value.forEach((_,i) => editField(row,value,i,
-          ['color','color2','background'].includes(key) ? ['Red','Green','Blue'][i] : ['X','Y','Z'][i] || String(i+1)));
+      if (Array.isArray(value) && value.every((n) => typeof n === "number")) {
+        const group = editGroup(parent, title),
+          row = document.createElement("div");
+        row.className = "edit-vector";
+        group.append(row);
+        value.forEach((_, i) =>
+          editField(
+            row,
+            value,
+            i,
+            ["color", "color2", "background"].includes(key)
+              ? ["Red", "Green", "Blue"][i]
+              : ["X", "Y", "Z"][i] || String(i + 1),
+          ),
+        );
         return;
       }
-      if (value && typeof value === 'object') {
+      if (value && typeof value === "object") {
         const group = editGroup(parent, title);
-        Object.keys(value).forEach(child => editField(group,value,child,
-          Array.isArray(value) ? 'Vertex '+(Number(child)+1) : editLabels[child] || child));
+        Object.keys(value).forEach((child) =>
+          editField(
+            group,
+            value,
+            child,
+            Array.isArray(value) ? "Vertex " + (Number(child) + 1) : editLabels[child] || child,
+          ),
+        );
         return;
       }
-      const label = document.createElement('label'); label.append(document.createTextNode(title));
+      const label = document.createElement("label");
+      label.append(document.createTextNode(title));
       let input;
-      if (key === 'texture') {
-        input = document.createElement('select');
-        for (const [v,text] of [['','Solid colour'],['checker','Checker'],['marble','Marble'],['wood','Wood']]) {
-          const option = document.createElement('option'); option.value=v; option.textContent=text; input.append(option);
+      if (key === "texture") {
+        input = document.createElement("select");
+        for (const [v, text] of [
+          ["", "Solid colour"],
+          ["checker", "Checker"],
+          ["marble", "Marble"],
+          ["wood", "Wood"],
+        ]) {
+          const option = document.createElement("option");
+          option.value = v;
+          option.textContent = text;
+          input.append(option);
         }
-        input.value = value || '';
+        input.value = value || "";
       } else {
-        input = document.createElement('input');
-        input.type = typeof value === 'number' ? 'number' : typeof value === 'boolean' ? 'checkbox' : 'text';
-        if (input.type === 'number') { input.step='any'; input.required=true; }
-        if (input.type === 'checkbox') input.checked=value; else input.value=value;
+        input = document.createElement("input");
+        input.type =
+          typeof value === "number" ? "number" : typeof value === "boolean" ? "checkbox" : "text";
+        if (input.type === "number") {
+          input.step = "any";
+          input.required = true;
+        }
+        if (input.type === "checkbox") input.checked = value;
+        else input.value = value;
         // Geometry type remains fixed so its required fields always match.
-        if (key === 'type') input.readOnly=true;
+        if (key === "type") input.readOnly = true;
       }
-      input.addEventListener('input',()=>{
-        owner[key] = input.type === 'number' ? input.valueAsNumber : input.type === 'checkbox' ? input.checked : input.value;
-        getElement('sceneEditStatus').textContent='Unapplied changes — press Render scene.';
+      input.addEventListener("input", () => {
+        owner[key] =
+          input.type === "number"
+            ? input.valueAsNumber
+            : input.type === "checkbox"
+              ? input.checked
+              : input.value;
+        getElement("sceneEditStatus").textContent = "Unapplied changes — press Render scene.";
       });
-      label.append(input); parent.append(label);
+      label.append(input);
+      parent.append(label);
     }
     function showObjectFields() {
-      const host=getElement('objectFields'), indexInput=getElement('editObjectIndex');
+      const host = getElement("objectFields"),
+        indexInput = getElement("editObjectIndex");
       host.replaceChildren();
-      const index=Number(indexInput.value)-1;
-      if (!Number.isInteger(index) || index<0 || index>=sceneDraft.objects.length) return;
-      const object=sceneDraft.objects[index];
-      object.material = {color:[0.7,0.7,0.7],color2:[0.06,0.08,0.1],ka:0.12,kd:0.7,ks:0.35,
-        kr:0,kt:0,ior:1.5,shininess:100,scale:1,texture:'',...object.material};
-      Object.keys(object).forEach(key=>editField(host,object,key));
+      const index = Number(indexInput.value) - 1;
+      if (!Number.isInteger(index) || index < 0 || index >= sceneDraft.objects.length) return;
+      const object = sceneDraft.objects[index];
+      object.material = {
+        color: [0.7, 0.7, 0.7],
+        color2: [0.06, 0.08, 0.1],
+        ka: 0.12,
+        kd: 0.7,
+        ks: 0.35,
+        kr: 0,
+        kt: 0,
+        ior: 1.5,
+        shininess: 100,
+        scale: 1,
+        texture: "",
+        ...object.material,
+      };
+      Object.keys(object).forEach((key) => editField(host, object, key));
     }
     function syncSceneControls() {
-      sceneDraft=structuredClone(world);
-      sceneDraft.camera.up ||= [0,1,0];
-      const host=getElement('worldFields'); host.replaceChildren();
-      editField(host,sceneDraft,'background'); editField(host,sceneDraft,'camera');
-      const lights=getElement('lightFields'); lights.replaceChildren();
-      sceneDraft.lights.forEach((light,index)=>{
-        light.color ||= [1,1,1]; light.intensity ??= 1;
-        const group=editGroup(lights,'Light '+(index+1)); group.classList.add('edit-grid');
+      sceneDraft = structuredClone(world);
+      sceneDraft.camera.up ||= [0, 1, 0];
+      const host = getElement("worldFields");
+      host.replaceChildren();
+      editField(host, sceneDraft, "background");
+      editField(host, sceneDraft, "camera");
+      const lights = getElement("lightFields");
+      lights.replaceChildren();
+      sceneDraft.lights.forEach((light, index) => {
+        light.color ||= [1, 1, 1];
+        light.intensity ??= 1;
+        const group = editGroup(lights, "Light " + (index + 1));
+        group.classList.add("edit-grid");
         // Use a consistent layout regardless of property order in the scene.
-        const fieldOrder = ['position', 'direction', 'color', 'intensity'];
-        fieldOrder.filter(key => key in light).forEach(key => editField(group, light, key));
-        Object.keys(light).filter(key => !fieldOrder.includes(key))
-          .forEach(key => editField(group, light, key));
+        const fieldOrder = ["position", "direction", "color", "intensity"];
+        fieldOrder.filter((key) => key in light).forEach((key) => editField(group, light, key));
+        Object.keys(light)
+          .filter((key) => !fieldOrder.includes(key))
+          .forEach((key) => editField(group, light, key));
       });
-      const picker=getElement('editObjectIndex'); picker.value=1;
-      picker.max=sceneDraft.objects.length; picker.disabled=!sceneDraft.objects.length;
-      getElement('editObjectCount').textContent='of '+sceneDraft.objects.length.toLocaleString();
-      getElement('sceneEditStatus').textContent=''; showObjectFields();
+      const picker = getElement("editObjectIndex");
+      picker.value = 1;
+      picker.max = sceneDraft.objects.length;
+      picker.disabled = !sceneDraft.objects.length;
+      getElement("editObjectCount").textContent = "of " + sceneDraft.objects.length.toLocaleString();
+      getElement("sceneEditStatus").textContent = "";
+      showObjectFields();
     }
-    getElement('editObjectIndex').addEventListener('input',showObjectFields);
+    getElement("editObjectIndex").addEventListener("input", showObjectFields);
 
+    // -------------------------------------------------------------------------
+    // Initial scene
+    // -------------------------------------------------------------------------
     selectBuildFunction();
+  
   </script>
 </html>
