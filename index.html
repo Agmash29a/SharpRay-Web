@@ -220,18 +220,74 @@
       background: #000;
       border-color: #303a42;
     }
-  </style>
+  canvas { touch-action:none; cursor:grab; } canvas.dragging { cursor:grabbing; }
+
+    /* Full-width render, with scene and render controls below it. */
+    header { padding: 8px 16px; }
+    h1 { font-size: 23px; }
+    main { display:block; min-height:0; }
+    .stage { padding:12px 16px; }
+    .scene-panel { padding:16px 0; margin-top:12px; border:0; border-top:1px solid #d7dfe3; min-width:0; }
+    h2 { font-size:14px; margin:0 0 10px; }
+    h3 { font-size:14px; margin:16px 0 8px; }
+    .bar { margin-bottom:4px; }
+    #sceneDescription { margin:4px 0; font-size:12px!important; }
+    .view-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:6px 0; font-size:12px; }
+    #resetView { width:auto; margin:0; padding:5px 10px; }
+    canvas { width:100%; height:auto; max-height:none; aspect-ratio:3 / 2; }
+    .studio { margin-top:12px; padding-top:12px; border-top:1px solid #d7dfe3; }
+    .settings-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px 16px; }
+    label { margin:10px 0 5px; }
+    .settings-grid label { margin-top:0; }
+    input[type=number] { width:100%; padding:8px; border:1px solid #aebcc5; border-radius:6px; font:inherit; }
+    .render-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .render-actions > button { width:160px; }
+    .render-actions .row { flex:1; }
+    .render-actions p { flex-basis:100%; margin:0; }
+    [data-scene-panel][hidden] { display:none; }
+    #mountainControls p, #sceneControls p { font-size:12px; line-height:1.5; }
+    @media(max-width:800px) {
+      main { grid-template-columns:1fr; }
+      .scene-panel { border-left:0; border-top:1px solid #d7dfe3; }
+      .settings-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      header { padding:8px 16px; }
+    }
+    .render-info { padding-top:12px; }
+    #mountainControls { padding-top:20px; }
+    .scene-edit { margin:16px 0; padding:14px; border:1px solid #d7dfe3; border-radius:7px; }
+    .scene-edit > summary { font-weight:600; }
+    .scene-edit p { font-size:12px; }
+    .edit-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; }
+    .edit-group { min-width:0; border:1px solid #e1e7ea; border-radius:6px; padding:10px; margin:8px 0; }
+    .edit-group legend { font-size:13px; font-weight:600; }
+    .edit-vector { display:flex; gap:6px; }
+    .edit-vector label { flex:1; min-width:0; font-size:11px; }
+    .edit-vector input { min-width:0; }
+    .object-picker { display:flex; align-items:center; gap:10px; margin-top:12px; }
+    .object-picker input { max-width:110px; }
+    .scene-edit input:invalid { border-color:#b42318; }
+    .scene-edit input[type=color] { display:block; width:100%; max-width:240px; height:40px; margin-top:6px; padding:3px; border:1px solid #aebcc5; border-radius:6px; cursor:pointer; background:#fff; }
+</style>
   <header>
     <div>
-      <div class="tag">RILEY T. PERRY · 2004 → BROWSER</div>
+      
       <h1>Sharp<span>Ray</span></h1>
     </div>
     <small>Recursive ray tracing · entirely offline</small>
   </header>
   <main>
-    <aside>
-      <div class="tag">RENDER STUDIO</div>
-      <label for="preset">Scene</label
+
+    <section class="stage">
+<canvas tabindex="0" id="canvas" width="900" height="600" aria-label="Ray-traced scene"></canvas
+      ><progress id="progress" max="100" value="0"></progress>
+<div class="render-info">
+      <div class="bar">
+        <span id="sceneName">Reflection & glass</span><span id="status" role="status">Ready</span>
+      </div>
+      <p id="sceneDescription" class="muted" style="font-size: 13px; line-height: 1.5"></p>
+      <div class="view-toolbar"><span class="muted">Drag to rotate · Scroll to zoom</span><button id="resetView">Reset view</button></div>
+</div>
+<aside class="scene-panel"><h2>Scene</h2><label for="preset">Scene</label
       ><select id="preset">
         <optgroup label="Browser favourites">
           <option value="studio">Reflection & glass</option>
@@ -254,23 +310,88 @@
           <option value="temple">Marble temple</option>
           <option value="rainbow">Spectrum of glass</option>
           <option value="pyramid">The golden stack</option>
-        </optgroup></select
-      ><label for="resolution">Resolution</label
+        </optgroup><optgroup label="Create a scene"><option value="mountain">Mountain generator</option><option value="obj">Imported OBJ model</option></optgroup></select><div id="sceneControls" aria-live="polite"><section data-scene-panel="preset"><h3>Scene controls</h3><p class="muted">This preset is ready to render. Adjust quality and camera settings in Render Studio below the image, or edit scene values in Render Studio.</p></section><section data-scene-panel="obj" hidden><h3>OBJ model</h3><button id="objImport">Import OBJ model</button>
+      <input id="objFile" type="file" accept=".obj,text/plain" hidden />
+      <label for="objColour">OBJ surface colour</label>
+      <input id="objColour" type="color" value="#8daeca" aria-label="OBJ surface colour" />
+      <p class="muted" style="font-size: 12px; line-height: 1.5">
+        Import replaces the scene. Up to 20 MB / 50,000 triangles. Flat shading; MTL materials and
+        textures are not loaded. Models are centred and fitted automatically.
+      </p>
+      </section><section id="mountainControls" data-scene-panel="mountain" hidden>
+        <h2>Mountain generator</h2>
+        <p class="muted">MountainGen-HTML terrain. Generate replaces the scene.</p>
+        <label for="mountainDetail">Subdivision detail</label>
+        <select id="mountainDetail">
+          <option value="2">2 · 16 triangles</option>
+          <option value="3">3 · 64 triangles</option>
+          <option value="4">4 · 256 triangles</option>
+          <option value="5" selected>5 · 1,024 triangles</option>
+          <option value="6">6 · 4,096 triangles</option>
+          <option value="7">7 · 16,384 triangles</option>
+        </select>
+        <label for="mountainRoughness">Roughness (0.2–2.5)</label
+        ><input id="mountainRoughness" type="number" min="0.2" max="2.5" step="0.05" value="1" />
+        <label for="mountainSeed">Random seed</label
+        ><input
+          id="mountainSeed"
+          type="number"
+          min="-2147483648"
+          max="2147483647"
+          step="1"
+          value="2002"
+        />
+        <button id="mountainRandom">Randomize seed</button>
+        <label for="mountainPalette">Terrain palette</label
+        ><select id="mountainPalette">
+          <option>Alpine</option>
+          <option>Original 2002</option>
+          <option>Desert</option>
+          <option>Ice world</option>
+        </select>
+        <label for="mountainSnow">Snowline (%)</label
+        ><input id="mountainSnow" type="number" min="20" max="95" value="67" />
+        <label for="mountainWater"
+          ><input id="mountainWater" type="checkbox" checked style="width: auto" /> Reflective
+          water</label
+        >
+        <label for="mountainWaterLevel">Sea level (−90–120)</label
+        ><input id="mountainWaterLevel" type="number" min="-90" max="120" step="5" value="0" />
+        <button id="mountainGenerate">Generate mountain</button>
+        <p class="muted">
+          Same seed and settings reproduce the same landscape. Starts at draft quality; use Render
+          to increase quality.
+        </p>
+      </section>
+</div></aside>
+<section class="studio"><h2>Render Studio</h2><div class="settings-grid"><div class="control"><label for="resolution">Resolution</label
       ><select id="resolution">
         <option value="480">Draft · 480 × 320</option>
         <option value="900" selected>Standard · 900 × 600</option>
         <option value="1500">Large · 1500 × 1000</option></select
-      ><label for="samples">Anti-aliasing</label
+      ></div><div class="control"><label for="samples">Anti-aliasing</label
       ><select id="samples">
         <option value="1">1 sample / pixel</option>
         <option value="4" selected>4 samples / pixel</option>
         <option value="9">9 samples / pixel</option></select
-      ><label for="depth">Reflection depth <output id="depthOut">5</output></label
-      ><input id="depth" type="range" min="0" max="9" value="5" /><label for="orbit"
+      ></div><div class="control"><label for="depth">Reflection depth <output id="depthOut">5</output></label
+      ><input id="depth" type="range" min="0" max="9" value="5" /></div><div class="control"><label for="orbit"
         >Camera orbit <output id="orbitOut">0°</output></label
-      ><input id="orbit" type="range" min="-180" max="180" value="0" /><label for="zoom"
+      ><input id="orbit" type="range" min="-180" max="180" value="0" /></div><div class="control"><label for="zoom"
         >Camera distance <output id="zoomOut">100%</output></label
-      ><input id="zoom" type="range" min="40" max="200" value="100" /><button
+      ><input id="zoom" type="range" min="40" max="200" value="100" /></div></div><details class="scene-edit">
+<summary>Edit scene</summary>
+<p class="muted">Changes apply when you press Render scene. Selecting or generating a new scene replaces these edits.</p>
+<div id="worldFields" class="edit-grid"></div>
+<details><summary>Lights</summary><div id="lightFields"></div></details>
+<details><summary>Objects &amp; materials</summary>
+<div class="object-picker"><label for="editObjectIndex">Object number</label><input id="editObjectIndex" type="number" min="1" step="1" value="1"><span id="editObjectCount"></span></div>
+<p class="muted">Select one object at a time, including individual triangles in imported models and generated mountains.</p>
+<div id="objectFields" class="edit-grid"></div>
+</details>
+<p id="sceneEditStatus" role="status" class="muted"></p>
+</details>
+<div class="render-actions"><button
         id="render"
         class="primary"
       >
@@ -283,27 +404,7 @@
         Change settings, then render. Rendering runs in a background worker so the interface stays
         responsive.
       </p>
-    </aside>
-    <section class="stage">
-      <div class="bar">
-        <span id="sceneName">Reflection & glass</span><span id="status" role="status">Ready</span>
-      </div>
-      <p id="sceneDescription" class="muted" style="font-size: 13px; line-height: 1.5"></p>
-      <canvas id="canvas" width="900" height="600" aria-label="Ray-traced scene"></canvas
-      ><progress id="progress" max="100" value="0"></progress>
-      <details>
-        <summary>Edit scene JSON</summary>
-        <p>
-          Edit objects, materials, lights and camera. Applying a scene renders it; export a JSON
-          file to keep changes.
-        </p>
-        <textarea id="editor" spellcheck="false" aria-label="Scene JSON"></textarea>
-        <div class="row">
-          <button id="apply">Apply & render</button><button id="export">Export JSON</button
-          ><button id="import">Import JSON</button>
-        </div>
-        <input id="file" type="file" accept=".json,application/json" hidden />
-      </details>
+    </div></section>
       <details>
         <summary>About this adaptation & supported features</summary>
         <p>
@@ -317,11 +418,11 @@
         <p>
           Includes spheres, ellipsoids, planes, boxes, triangles, discs and open cylinders;
           point/directional lights; checker, marble and wood textures. New browser conveniences
-          include orbit controls, PNG export and JSON scenes. Noise textures and glass Fresnel
+          include orbit controls, PNG export and editable scene controls. Noise textures and glass Fresnel
           blending are new approximations. This is a core adaptation, not a complete port: legacy
-          mesh/PLY loading, torus quartics, transformed instances, image textures and the full
-          original scene catalogue are not included. Glass casts opaque shadows; no caustics or
-          global illumination.
+          PLY loading, torus quartics, transformed instances, image textures and the full original
+          scene catalogue are not included. Glass casts opaque shadows; no caustics or global
+          illumination.
         </p>
         <p>
           Open this HTML directly in a current desktop browser. No server, installation, internet or
@@ -329,431 +430,892 @@
         </p>
       </details>
     </section>
+
   </main>
-  <script id="engine" type="text/plain">
-      // (c) 2004 by Riley T. Perry - Chillers of Entropy
-      // SharpRay browser adaptation. Original comments are attributed by source file.
-      // Vector3D and RGBColour are represented by [x,y,z] and [r,g,b] arrays.
-      // Ray.o and Ray.d are passed as rayOrigin and rayDirection.
-      // World.worldObjects / worldLights are stored as JSON objects / lights.
-      // Preserve those JSON field names so previously exported scenes still load.
-      
-      // Adapted from SharpRay by Riley T. Perry (2004), commit 8b16f787edd2bf5595f8b37c2ab01fd54b59002a.
-      const addVectors = (a, b) => a.map((v, i) => v + b[i]),
-        subtractVectors = (a, b) => a.map((v, i) => v - b[i]),
-        scaleVector = (a, t) => a.map((v) => v * t),
-        dotProduct = (a, b) => a.reduce((s, v, i) => s + v * b[i], 0),
-        crossProduct = (a, b) => [
-          a[1] * b[2] - a[2] * b[1],
-          a[2] * b[0] - a[0] * b[2],
-          a[0] * b[1] - a[1] * b[0],
-        ],
-        normalise = (a) => scaleVector(a, 1 / Math.hypot(...a)),
-        blendColours = (a, b, t) => addVectors(scaleVector(a, 1 - t), scaleVector(b, t)),
-        reflectedDirection = (d, n) => subtractVectors(d, scaleVector(n, 2 * dotProduct(d, n)));
-      const kEpsilon = 1e-4;
-      /*
-       * Original source: OBJECT_Sphere.cs (and the other OBJECT_*.cs files).
-       * Sphere Description
-       * - A sphere is the points (r - radius) distance from the point (c centre)
-       * - p is a point of distance r away from c
-       * - The sphere is written in terms of (p-c).(p-c)-r^2=0
-       * - p can be expressed in terms of t (p=o+td) which is a quadratic (At^2+Bt+C=0)
-       * - The roots are then used to determine the number of hit points
-       *
-       * Browser adaptation: test each supported primitive and return its distance and normal.
-       * Sphere/ellipsoid coefficients use half of the original quadratic B coefficient.
-       * JSON geometry names (position, radius, radii) stay unchanged for compatibility.
-       */
-      function hitObject(rayOrigin, rayDirection, obj) {
-        let tmin = Infinity,
-          normal;
-        // Find the vector between the centre of the sphere and the ray origin
-        const temp = subtractVectors(rayOrigin, obj.position || [0, 0, 0]);
-        if (obj.type === "sphere" || obj.type === "ellipsoid") {
-          const r = obj.radii || [obj.radius, obj.radius, obj.radius],
-            q = temp.map((v, i) => v / r[i]),
-            v = rayDirection.map((v, i) => v / r[i]);
-          const a = dotProduct(v, v),
-            b = dotProduct(q, v),
-            c = dotProduct(q, q) - 1,
-            discriminant = b * b - a * c;
-          // Quadratics can have zero, one, or two real roots depending on the discriminant.
-          if (discriminant < 0) return null;
-          let smallerRoot = (-b - Math.sqrt(discriminant)) / a,
-            largerRoot = (-b + Math.sqrt(discriminant)) / a;
-          tmin = smallerRoot > kEpsilon ? smallerRoot : largerRoot;
-          if (tmin <= kEpsilon) return null;
-          normal = normalise(
-            addVectors(temp, scaleVector(rayDirection, tmin)).map((v, i) => v / (r[i] * r[i])),
-          );
-        } else if (obj.type === "plane" || obj.type === "disc") {
-          normal = normalise(obj.normal);
-          const denominator = dotProduct(rayDirection, normal);
-          if (Math.abs(denominator) < 1e-9) return null;
-          tmin = -dotProduct(temp, normal) / denominator;
-          if (tmin <= kEpsilon) return null;
-          if (
-            obj.type === "disc" &&
-            dotProduct(
-              addVectors(temp, scaleVector(rayDirection, tmin)),
-              addVectors(temp, scaleVector(rayDirection, tmin)),
-            ) >
-              obj.radius * obj.radius
-          )
-            return null;
-        } else if (obj.type === "box") {
-          let tEnter = -Infinity,
-            tExit = Infinity,
-            entryNormal,
-            exitNormal;
-          for (let i = 0; i < 3; i++) {
-            const h = obj.size[i] / 2;
-            if (Math.abs(rayDirection[i]) < 1e-12) {
-              if (Math.abs(temp[i]) > h) return null;
-              continue;
-            }
-            let a = (-h - temp[i]) / rayDirection[i],
-              b = (h - temp[i]) / rayDirection[i],
-              nearNormal = [0, 0, 0],
-              farNormal = [0, 0, 0];
-            nearNormal[i] = -1;
-            farNormal[i] = 1;
-            if (a > b) {
-              [a, b] = [b, a];
-              [nearNormal, farNormal] = [farNormal, nearNormal];
-            }
-            if (a > tEnter) {
-              tEnter = a;
-              entryNormal = nearNormal;
-            }
-            if (b < tExit) {
-              tExit = b;
-              exitNormal = farNormal;
-            }
-            if (tEnter > tExit) return null;
+  <script id="mountain-generator" type="text/plain">
+    
+    // TerrainGenerator and legacy comments from MountainGen-HTML.
+    const PRESETS = {
+      Alpine: { rock: "#77838c", snow: "#f1f7f8", vegetation: "#4a9576", water: "#3380a7" },
+      "Original 2002": { rock: "#323232", snow: "#7d7d7d", vegetation: "#007d00", water: "#00007d" },
+      Desert: { rock: "#cc8d60", snow: "#f4ddbb", vegetation: "#777f50", water: "#3379a2" },
+      "Ice world": { rock: "#5b728d", snow: "#eaf8ff", vegetation: "#80b4c4", water: "#3e87bd" },
+    };
+    // Stable seeded pseudorandom values; repeated generations with the same seed
+    // and settings produce identical geometry. This is not System.Random's sequence.
+    function makeRandom(seed) {
+      let state = (seed | 0) >>> 0;
+      return () => {
+        state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+        return state / 4294967296;
+      };
+    }
+    function hash01(x) {
+      let n = (x ^ (x >>> 16)) >>> 0;
+      n = Math.imul(n, 0x7feb352d) >>> 0;
+      n ^= n >>> 15;
+      n = Math.imul(n, 0x846ca68b) >>> 0;
+      n ^= n >>> 16;
+      return (n >>> 0) / 4294967296;
+    }
+    
+    class TerrainGenerator {
+      Generate(request) {
+        const { detailLevel, seed, roughness } = request;
+        if (!Number.isInteger(detailLevel) || detailLevel < 2 || detailLevel > 7)
+          throw Error("Detail must be from 2 to 7.");
+        if (!Number.isFinite(roughness) || roughness < 0.2 || roughness > 2.5)
+          throw Error("Roughness must be from 0.2 to 2.5.");
+        const start = performance.now(),
+          random = makeRandom(seed);
+        // Same three starting corners as the original VB6 NewLandscape().
+        // Winding is chosen so normals point upward in modern 3D coordinates.
+        const points = [
+          [-600, 0, -600],
+          [0, 0, 600],
+          [600, 0, -600],
+        ];
+        let faces = [[0, 1, 2]];
+        for (let depth = 0; depth < detailLevel; depth++) {
+          const edgeMidpoints = new Map(),
+            subdivided = [];
+          // Early subdivisions create broad mountains; later ones add smaller detail.
+          const amplitude = 230 * Math.pow(0.51, depth) * roughness;
+          function DivideLine(a, b) {
+            const lo = Math.min(a, b),
+              hi = Math.max(a, b),
+              key = `${lo}:${hi}`;
+            if (edgeMidpoints.has(key)) return edgeMidpoints.get(key);
+            const first = points[a],
+              second = points[b];
+            const centre = [
+              (first[0] + second[0]) / 2,
+              (first[1] + second[1]) / 2,
+              (first[2] + second[2]) / 2,
+            ];
+            // Original DivideLine() has a 2:1 bias toward upward displacement.
+            const sign = Math.floor(random() * 3) === 0 ? -1 : 1;
+            const movement = sign * (0.15 + 0.85 * random()) * amplitude;
+            centre[1] += movement;
+            const index = points.length;
+            points.push(centre);
+            edgeMidpoints.set(key, index);
+            return index;
           }
-          tmin = tEnter > kEpsilon ? tEnter : tExit;
-          normal = tEnter > kEpsilon ? entryNormal : exitNormal;
-          if (tmin <= kEpsilon) return null;
-        } else if (obj.type === "triangle") {
-          const [a, b, c] = obj.vertices,
-            edge1 = subtractVectors(b, a),
-            edge2 = subtractVectors(c, a),
-            h = crossProduct(rayDirection, edge2),
-            determinant = dotProduct(edge1, h);
-          if (Math.abs(determinant) < 1e-9) return null;
-          const q = subtractVectors(rayOrigin, a),
-            u = dotProduct(q, h) / determinant;
-          if (u < 0 || u > 1) return null;
-          const k = crossProduct(q, edge1),
-            v = dotProduct(rayDirection, k) / determinant;
-          if (v < 0 || u + v > 1) return null;
-          tmin = dotProduct(edge2, k) / determinant;
-          if (tmin <= kEpsilon) return null;
-          normal = normalise(crossProduct(edge1, edge2));
-        } else if (obj.type === "cylinder") {
-          const a = rayDirection[0] ** 2 + rayDirection[2] ** 2,
-            b = temp[0] * rayDirection[0] + temp[2] * rayDirection[2],
-            c = temp[0] ** 2 + temp[2] ** 2 - obj.radius ** 2,
-            discriminant = b * b - a * c;
-          if (discriminant < 0 || a < 1e-12) return null;
-          for (const z of [(-b - Math.sqrt(discriminant)) / a, (-b + Math.sqrt(discriminant)) / a]) {
-            if (z > kEpsilon && Math.abs(temp[1] + z * rayDirection[1]) <= obj.height / 2) {
-              tmin = z;
+          function Make_Sides(a, b, c) {
+            return [DivideLine(a, b), DivideLine(b, c), DivideLine(c, a)];
+          }
+          function MakeTriangle(a, b, c) {
+            const [ab, bc, ca] = Make_Sides(a, b, c);
+            // Four congruent children, preserving triangle winding.
+            subdivided.push([a, ab, ca], [ab, b, bc], [ca, bc, c], [ab, bc, ca]);
+          }
+          for (const [a, b, c] of faces) MakeTriangle(a, b, c);
+          faces = subdivided;
+        }
+        const vertices = new Float32Array(points.length * 3),
+          indices = new Uint32Array(faces.length * 3);
+        let minHeight = Infinity,
+          maxHeight = -Infinity;
+        points.forEach(([x, y, z], i) => {
+          vertices.set([x, y, z], i * 3);
+          minHeight = Math.min(minHeight, y);
+          maxHeight = Math.max(maxHeight, y);
+        });
+        faces.forEach((face, i) => indices.set(face, i * 3));
+        return {
+          vertices,
+          indices,
+          triangleCount: faces.length,
+          minHeight,
+          maxHeight,
+          seed,
+          detailLevel,
+          generationMilliseconds: performance.now() - start,
+        };
+      }
+    }
+    
+    // MountainGen-HTML surface zoning, adapted to SharpRay materials.
+    // Preserve height/slope/seed decisions; SharpRay computes illumination and shadows.
+    function makeTerrainGeometry(terrain, request) {
+      const palette = PRESETS[request.palette];
+      const colour = (hex) => hex.match(/[0-9a-f]{2}/gi).map((v) => parseInt(v, 16) / 255);
+      const objects = [],
+        v = terrain.vertices,
+        idx = terrain.indices;
+      const heightRange = Math.max(1, terrain.maxHeight);
+      for (let t = 0; t < idx.length; t += 3) {
+        const vertices = [0, 1, 2].map((k) => Array.from(v.slice(idx[t + k] * 3, idx[t + k] * 3 + 3)));
+        const [a, b, c] = vertices;
+        const u = b.map((n, i) => n - a[i]),
+          w = c.map((n, i) => n - a[i]);
+        const normal = [
+          u[1] * w[2] - u[2] * w[1],
+          u[2] * w[0] - u[0] * w[2],
+          u[0] * w[1] - u[1] * w[0],
+        ];
+        const upness = Math.abs(normal[1]) / Math.hypot(...normal);
+        const height = Math.max(a[1], b[1], c[1]),
+          relativeHeight = height / heightRange;
+        const chance = hash01((t / 3) * 113 + terrain.seed);
+        let surface = "rock";
+        if (relativeHeight >= request.snowLine) surface = "snow";
+        else if (
+          height > 0 &&
+          upness > 0.54 &&
+          relativeHeight < 0.53 &&
+          chance < Math.max(0.13, (0.8 - relativeHeight) * upness)
+        )
+          surface = "vegetation";
+        const variance = surface === "rock" ? 0.88 + hash01((t / 3) * 53 + terrain.seed) * 0.24 : 1;
+        objects.push({
+          type: "triangle",
+          vertices: vertices.map((p) => p.map((n) => n / 100)),
+          material: {
+            color: colour(palette[surface]).map((n) => Math.min(1, n * variance)),
+            ka: 0.22,
+            kd: 0.8,
+            ks: surface === "snow" ? 0.2 : 0.05,
+            shininess: 32,
+          },
+        });
+      }
+      if (request.water) {
+        // Same triangular water surface as MountainGen-HTML; offset avoids coplanar hits.
+        const y = (request.waterLevel + 0.15) / 100;
+        objects.push({
+          type: "triangle",
+          vertices: [
+            [-6, y, -6],
+            [0, y, 6],
+            [6, y, -6],
+          ],
+          material: {
+            color: colour(palette.water),
+            ka: 0.12,
+            kd: 0.45,
+            ks: 0.7,
+            shininess: 180,
+            kr: 0.35,
+          },
+        });
+      }
+      return objects;
+    }
+    function buildMountainWorld(request) {
+      if (!Number.isInteger(request.seed) || request.seed < -2147483648 || request.seed > 2147483647)
+        throw Error("Enter a 32-bit integer seed.");
+      if (
+        !PRESETS[request.palette] ||
+        !Number.isFinite(request.snowLine) ||
+        request.snowLine < 0.2 ||
+        request.snowLine > 0.95 ||
+        !Number.isFinite(request.waterLevel) ||
+        request.waterLevel < -90 ||
+        request.waterLevel > 120
+      )
+        throw Error("Invalid surface settings.");
+      const terrain = new TerrainGenerator().Generate(request);
+      return {
+        background: [0, 0, 0],
+        camera: {
+          eye: [12, 10, 16],
+          target: [0, (terrain.minHeight + terrain.maxHeight) / 200, 0],
+          fov: 45,
+        },
+        lights: [
+          { position: [-30, 60, 40], intensity: 1 },
+          { position: [30, 20, -20], intensity: 0.3, color: [0.65, 0.8, 1] },
+        ],
+        objects: makeTerrainGeometry(terrain, request),
+      };
+    }
+    
+  
+  </script>
+  <script id="engine" type="text/plain">
+    
+    // (c) 2004 by Riley T. Perry - Chillers of Entropy
+    // SharpRay browser adaptation. Original comments are attributed by source file.
+    // Vector3D and RGBColour are represented by [x,y,z] and [r,g,b] arrays.
+    // Ray.o and Ray.d are passed as rayOrigin and rayDirection.
+    // World.worldObjects / worldLights are stored as JSON objects / lights.
+    // Preserve those JSON field names so previously exported scenes still load.
+    
+    // Adapted from SharpRay by Riley T. Perry (2004), commit 8b16f787edd2bf5595f8b37c2ab01fd54b59002a.
+    const addVectors = (a, b) => a.map((v, i) => v + b[i]),
+      subtractVectors = (a, b) => a.map((v, i) => v - b[i]),
+      scaleVector = (a, t) => a.map((v) => v * t),
+      dotProduct = (a, b) => a.reduce((s, v, i) => s + v * b[i], 0),
+      crossProduct = (a, b) => [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+      ],
+      normalise = (a) => scaleVector(a, 1 / Math.hypot(...a)),
+      blendColours = (a, b, t) => addVectors(scaleVector(a, 1 - t), scaleVector(b, t)),
+      reflectedDirection = (d, n) => subtractVectors(d, scaleVector(n, 2 * dotProduct(d, n)));
+    const kEpsilon = 1e-4;
+    /*
+     * Original source: OBJECT_Sphere.cs (and the other OBJECT_*.cs files).
+     * Sphere Description
+     * - A sphere is the points (r - radius) distance from the point (c centre)
+     * - p is a point of distance r away from c
+     * - The sphere is written in terms of (p-c).(p-c)-r^2=0
+     * - p can be expressed in terms of t (p=o+td) which is a quadratic (At^2+Bt+C=0)
+     * - The roots are then used to determine the number of hit points
+     *
+     * Browser adaptation: test each supported primitive and return its distance and normal.
+     * Sphere/ellipsoid coefficients use half of the original quadratic B coefficient.
+     * JSON geometry names (position, radius, radii) stay unchanged for compatibility.
+     */
+    function hitObject(rayOrigin, rayDirection, obj) {
+      let tmin = Infinity,
+        normal;
+      // Find the vector between the centre of the sphere and the ray origin
+      const temp = subtractVectors(rayOrigin, obj.position || [0, 0, 0]);
+      if (obj.type === "sphere" || obj.type === "ellipsoid") {
+        const r = obj.radii || [obj.radius, obj.radius, obj.radius],
+          q = temp.map((v, i) => v / r[i]),
+          v = rayDirection.map((v, i) => v / r[i]);
+        const a = dotProduct(v, v),
+          b = dotProduct(q, v),
+          c = dotProduct(q, q) - 1,
+          discriminant = b * b - a * c;
+        // Quadratics can have zero, one, or two real roots depending on the discriminant.
+        if (discriminant < 0) return null;
+        let smallerRoot = (-b - Math.sqrt(discriminant)) / a,
+          largerRoot = (-b + Math.sqrt(discriminant)) / a;
+        tmin = smallerRoot > kEpsilon ? smallerRoot : largerRoot;
+        if (tmin <= kEpsilon) return null;
+        normal = normalise(
+          addVectors(temp, scaleVector(rayDirection, tmin)).map((v, i) => v / (r[i] * r[i])),
+        );
+      } else if (obj.type === "plane" || obj.type === "disc") {
+        normal = normalise(obj.normal);
+        const denominator = dotProduct(rayDirection, normal);
+        if (Math.abs(denominator) < 1e-9) return null;
+        tmin = -dotProduct(temp, normal) / denominator;
+        if (tmin <= kEpsilon) return null;
+        if (
+          obj.type === "disc" &&
+          dotProduct(
+            addVectors(temp, scaleVector(rayDirection, tmin)),
+            addVectors(temp, scaleVector(rayDirection, tmin)),
+          ) >
+            obj.radius * obj.radius
+        )
+          return null;
+      } else if (obj.type === "box") {
+        let tEnter = -Infinity,
+          tExit = Infinity,
+          entryNormal,
+          exitNormal;
+        for (let i = 0; i < 3; i++) {
+          const h = obj.size[i] / 2;
+          if (Math.abs(rayDirection[i]) < 1e-12) {
+            if (Math.abs(temp[i]) > h) return null;
+            continue;
+          }
+          let a = (-h - temp[i]) / rayDirection[i],
+            b = (h - temp[i]) / rayDirection[i],
+            nearNormal = [0, 0, 0],
+            farNormal = [0, 0, 0];
+          nearNormal[i] = -1;
+          farNormal[i] = 1;
+          if (a > b) {
+            [a, b] = [b, a];
+            [nearNormal, farNormal] = [farNormal, nearNormal];
+          }
+          if (a > tEnter) {
+            tEnter = a;
+            entryNormal = nearNormal;
+          }
+          if (b < tExit) {
+            tExit = b;
+            exitNormal = farNormal;
+          }
+          if (tEnter > tExit) return null;
+        }
+        tmin = tEnter > kEpsilon ? tEnter : tExit;
+        normal = tEnter > kEpsilon ? entryNormal : exitNormal;
+        if (tmin <= kEpsilon) return null;
+      } else if (obj.type === "triangle") {
+        const [a, b, c] = obj.vertices,
+          edge1 = subtractVectors(b, a),
+          edge2 = subtractVectors(c, a),
+          h = crossProduct(rayDirection, edge2),
+          determinant = dotProduct(edge1, h);
+        if (Math.abs(determinant) < 1e-9) return null;
+        const q = subtractVectors(rayOrigin, a),
+          u = dotProduct(q, h) / determinant;
+        if (u < 0 || u > 1) return null;
+        const k = crossProduct(q, edge1),
+          v = dotProduct(rayDirection, k) / determinant;
+        if (v < 0 || u + v > 1) return null;
+        tmin = dotProduct(edge2, k) / determinant;
+        if (tmin <= kEpsilon) return null;
+        normal = normalise(crossProduct(edge1, edge2));
+      } else if (obj.type === "cylinder") {
+        const a = rayDirection[0] ** 2 + rayDirection[2] ** 2,
+          b = temp[0] * rayDirection[0] + temp[2] * rayDirection[2],
+          c = temp[0] ** 2 + temp[2] ** 2 - obj.radius ** 2,
+          discriminant = b * b - a * c;
+        if (discriminant < 0 || a < 1e-12) return null;
+        for (const z of [(-b - Math.sqrt(discriminant)) / a, (-b + Math.sqrt(discriminant)) / a]) {
+          if (z > kEpsilon && Math.abs(temp[1] + z * rayDirection[1]) <= obj.height / 2) {
+            tmin = z;
+            break;
+          }
+        }
+        if (!isFinite(tmin)) return null;
+        normal = normalise([temp[0] + tmin * rayDirection[0], 0, temp[2] + tmin * rayDirection[2]]);
+      } else return null;
+      return {
+        t: tmin,
+        n: normal,
+        s: obj,
+      };
+    }
+    /*
+     * Original source: World.cs
+     * hit Objects - Project ray and see if it hits an object
+     * Iterate through all objects and find
+     * the closest hit, if hit then assign
+     * qualities to the shading container
+     *
+     * Browser adaptation: the returned record contains t, n and s (distance, normal, object).
+     */
+    /* Browser addition: bounding-volume hierarchy for imported triangle meshes.
+     * Build once per render; preserve the original closest-hit rule and leave
+     * existing analytic primitives on the original linear traversal path.
+     */
+    function buildTriangleBVH(worldObjects) {
+      const entries = worldObjects
+        .filter((obj) => obj.type === "triangle")
+        .map((obj) => ({
+          obj,
+          minimum: [0, 1, 2].map(
+            (axis) => Math.min(...obj.vertices.map((point) => point[axis])) - 1e-7,
+          ),
+          maximum: [0, 1, 2].map(
+            (axis) => Math.max(...obj.vertices.map((point) => point[axis])) + 1e-7,
+          ),
+        }));
+      if (entries.length < 32) return;
+      function build(items) {
+        const minimum = [Infinity, Infinity, Infinity],
+          maximum = [-Infinity, -Infinity, -Infinity];
+        for (const item of items)
+          for (let axis = 0; axis < 3; axis++) {
+            minimum[axis] = Math.min(minimum[axis], item.minimum[axis]);
+            maximum[axis] = Math.max(maximum[axis], item.maximum[axis]);
+          }
+        if (items.length <= 8) return { minimum, maximum, objects: items.map((item) => item.obj) };
+        const lengths = maximum.map((value, axis) => value - minimum[axis]);
+        const axis = lengths.indexOf(Math.max(...lengths));
+        items.sort((a, b) => a.minimum[axis] + a.maximum[axis] - (b.minimum[axis] + b.maximum[axis]));
+        const middle = Math.floor(items.length / 2);
+        return {
+          minimum,
+          maximum,
+          left: build(items.slice(0, middle)),
+          right: build(items.slice(middle)),
+        };
+      }
+      worldObjects.triangleBVH = build(entries);
+      worldObjects.analyticObjects = worldObjects.filter((obj) => obj.type !== "triangle");
+    }
+    function rayHitsBounds(rayOrigin, rayDirection, node, minDistance) {
+      let near = kEpsilon,
+        far = minDistance;
+      for (let axis = 0; axis < 3; axis++) {
+        if (Math.abs(rayDirection[axis]) < 1e-15) {
+          if (rayOrigin[axis] < node.minimum[axis] || rayOrigin[axis] > node.maximum[axis])
+            return false;
+        } else {
+          let a = (node.minimum[axis] - rayOrigin[axis]) / rayDirection[axis];
+          let b = (node.maximum[axis] - rayOrigin[axis]) / rayDirection[axis];
+          if (a > b) [a, b] = [b, a];
+          near = Math.max(near, a);
+          far = Math.min(far, b);
+          if (near > far) return false;
+        }
+      }
+      return true;
+    }
+    
+    function hitObjects(rayOrigin, rayDirection, worldObjects, minDistance = Infinity) {
+      let shading = null;
+      for (const obj of worldObjects.analyticObjects || worldObjects) {
+        const hit = hitObject(rayOrigin, rayDirection, obj);
+        if (hit && hit.t < minDistance) {
+          minDistance = hit.t;
+          shading = hit;
+        }
+      }
+      if (worldObjects.triangleBVH) {
+        const stack = [worldObjects.triangleBVH];
+        while (stack.length) {
+          const node = stack.pop();
+          if (!rayHitsBounds(rayOrigin, rayDirection, node, minDistance)) continue;
+          if (node.objects) {
+            for (const obj of node.objects) {
+              const hit = hitObject(rayOrigin, rayDirection, obj);
+              if (hit && hit.t < minDistance) {
+                minDistance = hit.t;
+                shading = hit;
+              }
+            }
+          } else stack.push(node.left, node.right);
+        }
+      }
+      return shading;
+    }
+    /*
+     * Original source: TEXTURE_CheckerBoard.cs
+     * - CheckerBoard Texutre class
+     * (size) Size, (colour1, colour2) checker colours
+     * getColour - return colour given a hitpoint
+     *
+     * Browser adaptation: checker parity is equivalent to the original positive-modulus
+     * XOR pattern, with a small boundary offset to avoid floating-point flicker.
+     * The marble and wood noise below are browser additions, not the original noise classes.
+     */
+    function getColour(material, hitPoint) {
+      const colour1 = material.color || [0.7, 0.7, 0.7],
+        colour2 = material.color2 || [0.06, 0.08, 0.1],
+        scale = material.scale || 1;
+      if (material.texture === "checker") {
+        return ((hitPoint.reduce((s, x) => s + Math.floor((x + 1e-7) / scale), 0) % 2) + 2) % 2
+          ? colour1
+          : colour2;
+      }
+      let texturePoint = scaleVector(hitPoint, scale),
+        noise = 0;
+      for (let i = 1; i <= 5; i++)
+        noise +=
+          Math.sin(
+            texturePoint[0] * i * 1.73 + Math.sin(texturePoint[2] * i * 2.1) + texturePoint[1] * i,
+          ) / i;
+      if (material.texture === "marble")
+        return blendColours(colour1, colour2, 0.5 + 0.5 * Math.sin(texturePoint[0] * 4 + noise * 3));
+      if (material.texture === "wood")
+        return blendColours(
+          colour1,
+          colour2,
+          0.5 + 0.5 * Math.sin(Math.hypot(texturePoint[0], texturePoint[2]) * 10 + noise),
+        );
+      return colour1;
+    }
+    /*
+     * Original source: World.cs, MATERIAL_Phong.cs, MATERIAL_Reflective.cs,
+     * MATERIAL_Transparent.cs and MATERIAL_BasicMaterial.cs.
+     * trace Ray - Shade if an object is hit, otherwise
+     * use the ambient colour
+     *
+     * Check to see if reflections maxDepth has been reached
+     * If not then call the shading material which will in turn
+     * call this function again...
+     *
+     * shade - give this material some colour!
+     * ka: Ambient reflection coefficient; kd: diffuse reflection coefficient.
+     * cd: diffuse colour; ks: Specular component; n: Specular exponent (JSON: shininess).
+     * kr: reflection coefficient; kt: Transmission coefficient; ior: Index of refraction.
+     *
+     * Browser adaptation: material shading is combined here. Fresnel blending, ray-origin
+     * offsets and energy-weighted reflection differ from the original additive shading.
+     * Glass shadows are opaque; this renderer does not calculate caustics.
+     */
+    function traceRay(rayOrigin, rayDirection, world, depth, maxDepth) {
+      if (depth > maxDepth) return [0, 0, 0];
+      const shading = hitObjects(rayOrigin, rayDirection, world.objects);
+      if (!shading) return world.background;
+      const hitPoint = addVectors(rayOrigin, scaleVector(rayDirection, shading.t)),
+        insideObject = dotProduct(rayDirection, shading.n) > 0,
+        normal = insideObject ? scaleVector(shading.n, -1) : shading.n,
+        material = shading.s.material || {},
+        cd = getColour(material, hitPoint),
+        shadowRayOrigin = addVectors(hitPoint, scaleVector(normal, kEpsilon * 4));
+      let pixelColour = scaleVector(cd, material.ka ?? 0.12);
+      // Illumination loop
+      // Calculate additive colour with diffuse and specular components
+      for (const light of world.lights) {
+        const lightVector = light.direction
+            ? scaleVector(light.direction, -1)
+            : subtractVectors(light.position, hitPoint),
+          lightDistance = light.direction ? Infinity : Math.hypot(...lightVector),
+          lightDirection = normalise(lightVector),
+          ndotl = dotProduct(normal, lightDirection);
+        if (
+          ndotl <= 0 ||
+          hitObjects(shadowRayOrigin, lightDirection, world.objects, lightDistance - kEpsilon)
+        )
+          continue;
+        const specular =
+            Math.pow(
+              Math.max(
+                0,
+                dotProduct(
+                  reflectedDirection(scaleVector(lightDirection, -1), normal),
+                  scaleVector(rayDirection, -1),
+                ),
+              ),
+              material.shininess || 100,
+            ) * (material.ks ?? 0.35),
+          lightColour = light.color || [1, 1, 1];
+        pixelColour = addVectors(
+          pixelColour,
+          cd.map(
+            (v, i) =>
+              (v * (material.kd ?? 0.7) * ndotl + specular) * lightColour[i] * (light.intensity ?? 1),
+          ),
+        );
+      }
+      const kr = material.kr || 0,
+        kt = material.kt || 0;
+      // Transparent.totalInternalReflection / transmittedRay: Calculate transmitted ray.
+      // Reverse the normal and invert the index ratio when the ray hits inside.
+      if (kt > 0) {
+        const eta = insideObject ? material.ior || 1.5 : 1 / (material.ior || 1.5),
+          cosTheta1 = -dotProduct(rayDirection, normal),
+          transmissionDiscriminant = 1 - eta * eta * (1 - cosTheta1 * cosTheta1),
+          normalReflectance = ((1 - (material.ior || 1.5)) / (1 + (material.ior || 1.5))) ** 2,
+          fresnelReflectance =
+            transmissionDiscriminant < 0
+              ? 1
+              : normalReflectance + (1 - normalReflectance) * (1 - cosTheta1) ** 5;
+        pixelColour = addVectors(
+          scaleVector(pixelColour, 1 - kt),
+          scaleVector(
+            traceRay(
+              shadowRayOrigin,
+              reflectedDirection(rayDirection, normal),
+              world,
+              depth + 1,
+              maxDepth,
+            ),
+            transmissionDiscriminant < 0 ? 1 : kr + (1 - kr) * fresnelReflectance,
+          ),
+        );
+        if (transmissionDiscriminant >= 0) {
+          const transmittedDirection = normalise(
+            addVectors(
+              scaleVector(rayDirection, eta),
+              scaleVector(normal, eta * cosTheta1 - Math.sqrt(transmissionDiscriminant)),
+            ),
+          );
+          pixelColour = addVectors(
+            pixelColour,
+            scaleVector(
+              traceRay(
+                subtractVectors(hitPoint, scaleVector(normal, kEpsilon * 4)),
+                transmittedDirection,
+                world,
+                depth + 1,
+                maxDepth,
+              ),
+              kt * (1 - fresnelReflectance),
+            ),
+          );
+        }
+      } else if (kr > 0)
+        pixelColour = addVectors(
+          scaleVector(pixelColour, 1 - kr),
+          scaleVector(
+            traceRay(
+              shadowRayOrigin,
+              reflectedDirection(rayDirection, normal),
+              world,
+              depth + 1,
+              maxDepth,
+            ),
+            kr,
+          ),
+        );
+      return pixelColour;
+    }
+    /*
+     * Original source: CAMERA_BasicCamera.cs and CAMERA_PinHole.cs
+     * calculateUVW function (to be overridden), calculate orthonormal basis
+     * u,v,w: Orthonormal basis vectors
+     * e: Eye point; l: Lookat point; up: Up vector
+     *
+     * Browser adaptation: orbit and distance controls adjust e before calculating UVW.
+     * Field of view replaces the original view-plane distance d and PixelSize settings.
+     */
+    function calculateUVW(world, orbit, zoom, elevation = 0) {
+      const camera = world.camera,
+        lookat = camera.target,
+        eyeOffset = scaleVector(subtractVectors(camera.eye, lookat), zoom),
+        orbitAngle = (orbit * Math.PI) / 180,
+        distance = Math.hypot(...eyeOffset),
+        // MountainGen-style spherical orbit: clamp pitch to avoid flipping at the poles.
+        pitch = Math.max(-Math.PI / 2 + 0.02, Math.min(Math.PI / 2 - 0.02,
+          Math.atan2(eyeOffset[1], Math.hypot(eyeOffset[0], eyeOffset[2])) + elevation * Math.PI / 180)),
+        azimuth = Math.atan2(eyeOffset[0], eyeOffset[2]) + orbitAngle,
+        e = addVectors(lookat, [distance * Math.cos(pitch) * Math.sin(azimuth),
+          distance * Math.sin(pitch), distance * Math.cos(pitch) * Math.cos(azimuth)]),
+        w = normalise(subtractVectors(e, lookat)),
+        u = normalise(crossProduct(camera.up || [0, 1, 0], w)),
+        v = crossProduct(w, u);
+      return {
+        eye: e,
+        w,
+        u,
+        v,
+        f: Math.tan((camera.fov * Math.PI) / 360),
+      };
+    }
+    // CAMERA_PinHole.renderScene: build the scene from the camera's perspective.
+    // Browser addition: a Web Worker sends completed scanline strips to the canvas.
+    onmessage = ({ data }) => {
+      const {
+          scene: world,
+          width: hRes,
+          height: vRes,
+          samples: numSamples,
+          depth: maxDepth,
+          orbit,
+          zoom,
+        } = data,
+        camera = calculateUVW(world, orbit, zoom, data.elevation || 0),
+        sampleGridSize = Math.sqrt(numSamples),
+        renderStart = Date.now();
+      // Iterate through each point in the view plane
+      buildTriangleBVH(world.objects);
+      for (let row = 0; row < vRes; row += 8) {
+        const stripHeight = Math.min(8, vRes - row),
+          screenArray = new Uint8ClampedArray(hRes * stripHeight * 4);
+        for (let stripRow = 0; stripRow < stripHeight; stripRow++)
+          for (let col = 0; col < hRes; col++) {
+            // Trace ray and run through samples (browser: regular subpixel grid).
+            let pixelColour = [0, 0, 0];
+            for (let sampleRow = 0; sampleRow < sampleGridSize; sampleRow++)
+              for (let sampleCol = 0; sampleCol < sampleGridSize; sampleCol++) {
+                const viewPlaneX =
+                    ((((2 * (col + (sampleCol + 0.5) / sampleGridSize)) / hRes - 1) * hRes) / vRes) *
+                    camera.f,
+                  viewPlaneY =
+                    (1 - (2 * (row + stripRow + (sampleRow + 0.5) / sampleGridSize)) / vRes) * camera.f,
+                  rayDirection = normalise(
+                    addVectors(
+                      addVectors(scaleVector(camera.u, viewPlaneX), scaleVector(camera.v, viewPlaneY)),
+                      scaleVector(camera.w, -1),
+                    ),
+                  );
+                pixelColour = addVectors(
+                  pixelColour,
+                  traceRay(camera.eye, rayDirection, world, 0, maxDepth),
+                );
+              }
+            const pixelOffset = (stripRow * hRes + col) * 4;
+            for (let colourComponent = 0; colourComponent < 3; colourComponent++)
+              screenArray[pixelOffset + colourComponent] =
+                255 *
+                Math.pow(Math.max(0, Math.min(1, pixelColour[colourComponent] / numSamples)), 1 / 2.2);
+            // Fill in temp screen buffer; the fourth channel is opacity.
+            screenArray[pixelOffset + 3] = 255;
+          }
+        postMessage(
+          {
+            y: row,
+            rows: stripHeight,
+            pixels: screenArray,
+            percent: Math.round(((row + stripHeight) / vRes) * 100),
+            seconds: (Date.now() - renderStart) / 1000,
+          },
+          [screenArray.buffer],
+        );
+      }
+      postMessage({
+        done: true,
+        seconds: (Date.now() - renderStart) / 1000,
+      });
+    };
+    
+  
+  </script>
+  <script id="obj-parser" type="text/plain">
+    
+    /* Browser addition: Wavefront OBJ geometry importer.
+     * Original SharpRay used World.ReadInPLYFile for external triangle meshes.
+     * OBJ vertex indices are 1-based; negative indices count backwards from the
+     * vertex list at the face declaration. Texture/normal indices are not rendered.
+     * Imported geometry uses flat face normals and one user-selected material.
+     */
+    const OBJ_MAX_TRIANGLES = 50000;
+    function parseOBJ(source) {
+      const vertices = [],
+        faces = [],
+        warnings = new Set();
+      const lines = source.replace(/\\\r?\n/g, " ").split(/\r?\n/);
+      function error(line, message) {
+        throw Error(`OBJ line ${line}: ${message}`);
+      }
+      for (let row = 0; row < lines.length; row++) {
+        const fields = lines[row].split("#")[0].trim().split(/\s+/);
+        const keyword = fields.shift();
+        if (!keyword) continue;
+        if (keyword === "v") {
+          if (fields.length < 3) error(row + 1, "vertex needs x, y and z.");
+          let point = fields.slice(0, 3).map(Number);
+          if (!point.every(Number.isFinite)) error(row + 1, "invalid vertex coordinate.");
+          if (fields.length === 4) {
+            const weight = Number(fields[3]);
+            if (!Number.isFinite(weight) || weight === 0) error(row + 1, "invalid homogeneous weight.");
+            point = point.map((value) => value / weight);
+          }
+          if (!point.every(Number.isFinite)) error(row + 1, "vertex is outside numeric range.");
+          vertices.push(point);
+          if (vertices.length > 200000) error(row + 1, "maximum 200,000 vertices supported.");
+        } else if (keyword === "f") {
+          if (fields.length < 3 || fields.length > 256) error(row + 1, "faces need 3–256 corners.");
+          const indices = fields.map((field) => {
+            const token = field.split("/")[0];
+            if (!/^-?\d+$/.test(token)) error(row + 1, "invalid face vertex index.");
+            const index = Number(token);
+            const resolved = index > 0 ? index - 1 : vertices.length + index;
+            if (
+              !Number.isSafeInteger(index) ||
+              index === 0 ||
+              resolved < 0 ||
+              resolved >= vertices.length
+            )
+              error(row + 1, "face references a missing vertex.");
+            return resolved;
+          });
+          if (indices[0] === indices.at(-1)) indices.pop();
+          faces.push({ indices, line: row + 1 });
+          if (faces.length > OBJ_MAX_TRIANGLES) error(row + 1, "maximum 50,000 faces supported.");
+        } else if (["vt", "vn", "s", "mtllib", "usemtl"].includes(keyword)) {
+          warnings.add(
+            "UVs, supplied normals, smoothing groups and MTL materials are ignored; flat shading and one material are used.",
+          );
+        } else if (!["o", "g"].includes(keyword)) {
+          warnings.add(`Ignored OBJ record: ${keyword}.`);
+        }
+      }
+      if (!vertices.length || !faces.length)
+        throw Error("No polygon mesh found. OBJ must contain v and f records.");
+      // Centre and scale only vertices used by faces; loose points must not skew the camera fit.
+      const used = new Set(faces.flatMap((face) => face.indices));
+      const minimum = [Infinity, Infinity, Infinity],
+        maximum = [-Infinity, -Infinity, -Infinity];
+      for (const index of used)
+        vertices[index].forEach((value, axis) => {
+          minimum[axis] = Math.min(minimum[axis], value);
+          maximum[axis] = Math.max(maximum[axis], value);
+        });
+      const extent = maximum.map((value, axis) => value - minimum[axis]);
+      const largest = Math.max(...extent);
+      if (!(largest > 0) || !Number.isFinite(largest)) throw Error("Mesh has zero or invalid size.");
+      const centre = minimum.map((value, axis) => value / 2 + maximum[axis] / 2);
+      const scale = 5 / largest;
+      const points = vertices.map((point) =>
+        point.map((value, axis) => (value - centre[axis]) * scale),
+      );
+      const triangles = [];
+      let skipped = 0;
+      for (const face of faces) {
+        let polygon = face.indices.filter((index, i, list) => i === 0 || index !== list[i - 1]);
+        if (polygon.length < 3) {
+          skipped++;
+          continue;
+        }
+        // Newell's normal chooses the most stable 2D projection for ear clipping.
+        let normal = [0, 0, 0];
+        for (let i = 0; i < polygon.length; i++) {
+          const a = points[polygon[i]],
+            b = points[polygon[(i + 1) % polygon.length]];
+          normal[0] += (a[1] - b[1]) * (a[2] + b[2]);
+          normal[1] += (a[2] - b[2]) * (a[0] + b[0]);
+          normal[2] += (a[0] - b[0]) * (a[1] + b[1]);
+        }
+        const length = Math.hypot(...normal);
+        if (length < 1e-12) {
+          skipped++;
+          continue;
+        }
+        const drop = normal.map(Math.abs).indexOf(Math.max(...normal.map(Math.abs)));
+        const axes = [0, 1, 2].filter((axis) => axis !== drop);
+        const projected = (index) => axes.map((axis) => points[index][axis]);
+        const cross = (a, b, c) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+        const sign = Math.sign(
+          polygon.reduce((area, index, i) => {
+            const a = projected(index),
+              b = projected(polygon[(i + 1) % polygon.length]);
+            return area + a[0] * b[1] - b[0] * a[1];
+          }, 0),
+        );
+        const anchor = points[polygon[0]];
+        if (
+          polygon.some(
+            (index) =>
+              Math.abs(
+                points[index].reduce(
+                  (sum, value, axis) => sum + ((value - anchor[axis]) * normal[axis]) / length,
+                  0,
+                ),
+              ) > 1e-5,
+          )
+        )
+          warnings.add(
+            "Non-planar polygons were triangulated; export triangulated faces for predictable results.",
+          );
+        const emit = (indices) => {
+          if (triangles.length >= OBJ_MAX_TRIANGLES)
+            throw Error("Mesh exceeds 50,000 triangles. Simplify it before importing.");
+          triangles.push(indices.map((index) => points[index]));
+        };
+        while (polygon.length > 3) {
+          let clipped = false;
+          for (let i = 0; i < polygon.length; i++) {
+            const previous = (i + polygon.length - 1) % polygon.length,
+              next = (i + 1) % polygon.length;
+            const a = projected(polygon[previous]),
+              b = projected(polygon[i]),
+              c = projected(polygon[next]);
+            const turn = sign * cross(a, b, c);
+            if (Math.abs(turn) < 1e-12) {
+              polygon.splice(i, 1);
+              clipped = true;
+              break;
+            }
+            if (turn < 0) continue;
+            const occupied = polygon.some(
+              (index, j) =>
+                j !== previous &&
+                j !== i &&
+                j !== next &&
+                sign * cross(a, b, projected(index)) >= -1e-12 &&
+                sign * cross(b, c, projected(index)) >= -1e-12 &&
+                sign * cross(c, a, projected(index)) >= -1e-12,
+            );
+            if (!occupied) {
+              emit([polygon[previous], polygon[i], polygon[next]]);
+              polygon.splice(i, 1);
+              clipped = true;
               break;
             }
           }
-          if (!isFinite(tmin)) return null;
-          normal = normalise([temp[0] + tmin * rayDirection[0], 0, temp[2] + tmin * rayDirection[2]]);
-        } else return null;
-        return {
-          t: tmin,
-          n: normal,
-          s: obj,
-        };
-      }
-      /*
-       * Original source: World.cs
-       * hit Objects - Project ray and see if it hits an object
-       * Iterate through all objects and find
-       * the closest hit, if hit then assign
-       * qualities to the shading container
-       *
-       * Browser adaptation: the returned record contains t, n and s (distance, normal, object).
-       */
-      function hitObjects(rayOrigin, rayDirection, worldObjects, minDistance = Infinity) {
-        let shading = null;
-        for (const obj of worldObjects) {
-          const hit = hitObject(rayOrigin, rayDirection, obj);
-          if (hit && hit.t < minDistance) {
-            minDistance = hit.t;
-            shading = hit;
-          }
-        }
-        return shading;
-      }
-      /*
-       * Original source: TEXTURE_CheckerBoard.cs
-       * - CheckerBoard Texutre class
-       * (size) Size, (colour1, colour2) checker colours
-       * getColour - return colour given a hitpoint
-       *
-       * Browser adaptation: checker parity is equivalent to the original positive-modulus
-       * XOR pattern, with a small boundary offset to avoid floating-point flicker.
-       * The marble and wood noise below are browser additions, not the original noise classes.
-       */
-      function getColour(material, hitPoint) {
-        const colour1 = material.color || [0.7, 0.7, 0.7],
-          colour2 = material.color2 || [0.06, 0.08, 0.1],
-          scale = material.scale || 1;
-        if (material.texture === "checker") {
-          return ((hitPoint.reduce((s, x) => s + Math.floor((x + 1e-7) / scale), 0) % 2) + 2) % 2
-            ? colour1
-            : colour2;
-        }
-        let texturePoint = scaleVector(hitPoint, scale),
-          noise = 0;
-        for (let i = 1; i <= 5; i++)
-          noise +=
-            Math.sin(
-              texturePoint[0] * i * 1.73 + Math.sin(texturePoint[2] * i * 2.1) + texturePoint[1] * i,
-            ) / i;
-        if (material.texture === "marble")
-          return blendColours(colour1, colour2, 0.5 + 0.5 * Math.sin(texturePoint[0] * 4 + noise * 3));
-        if (material.texture === "wood")
-          return blendColours(
-            colour1,
-            colour2,
-            0.5 + 0.5 * Math.sin(Math.hypot(texturePoint[0], texturePoint[2]) * 10 + noise),
-          );
-        return colour1;
-      }
-      /*
-       * Original source: World.cs, MATERIAL_Phong.cs, MATERIAL_Reflective.cs,
-       * MATERIAL_Transparent.cs and MATERIAL_BasicMaterial.cs.
-       * trace Ray - Shade if an object is hit, otherwise
-       * use the ambient colour
-       *
-       * Check to see if reflections maxDepth has been reached
-       * If not then call the shading material which will in turn
-       * call this function again...
-       *
-       * shade - give this material some colour!
-       * ka: Ambient reflection coefficient; kd: diffuse reflection coefficient.
-       * cd: diffuse colour; ks: Specular component; n: Specular exponent (JSON: shininess).
-       * kr: reflection coefficient; kt: Transmission coefficient; ior: Index of refraction.
-       *
-       * Browser adaptation: material shading is combined here. Fresnel blending, ray-origin
-       * offsets and energy-weighted reflection differ from the original additive shading.
-       * Glass shadows are opaque; this renderer does not calculate caustics.
-       */
-      function traceRay(rayOrigin, rayDirection, world, depth, maxDepth) {
-        if (depth > maxDepth) return [0, 0, 0];
-        const shading = hitObjects(rayOrigin, rayDirection, world.objects);
-        if (!shading) return world.background;
-        const hitPoint = addVectors(rayOrigin, scaleVector(rayDirection, shading.t)),
-          insideObject = dotProduct(rayDirection, shading.n) > 0,
-          normal = insideObject ? scaleVector(shading.n, -1) : shading.n,
-          material = shading.s.material || {},
-          cd = getColour(material, hitPoint),
-          shadowRayOrigin = addVectors(hitPoint, scaleVector(normal, kEpsilon * 4));
-        let pixelColour = scaleVector(cd, material.ka ?? 0.12);
-        // Illumination loop
-        // Calculate additive colour with diffuse and specular components
-        for (const light of world.lights) {
-          const lightVector = light.direction
-              ? scaleVector(light.direction, -1)
-              : subtractVectors(light.position, hitPoint),
-            lightDistance = light.direction ? Infinity : Math.hypot(...lightVector),
-            lightDirection = normalise(lightVector),
-            ndotl = dotProduct(normal, lightDirection);
-          if (
-            ndotl <= 0 ||
-            hitObjects(shadowRayOrigin, lightDirection, world.objects, lightDistance - kEpsilon)
-          )
-            continue;
-          const specular =
-              Math.pow(
-                Math.max(
-                  0,
-                  dotProduct(
-                    reflectedDirection(scaleVector(lightDirection, -1), normal),
-                    scaleVector(rayDirection, -1),
-                  ),
-                ),
-                material.shininess || 100,
-              ) * (material.ks ?? 0.35),
-            lightColour = light.color || [1, 1, 1];
-          pixelColour = addVectors(
-            pixelColour,
-            cd.map(
-              (v, i) =>
-                (v * (material.kd ?? 0.7) * ndotl + specular) * lightColour[i] * (light.intensity ?? 1),
-            ),
-          );
-        }
-        const kr = material.kr || 0,
-          kt = material.kt || 0;
-        // Transparent.totalInternalReflection / transmittedRay: Calculate transmitted ray.
-        // Reverse the normal and invert the index ratio when the ray hits inside.
-        if (kt > 0) {
-          const eta = insideObject ? material.ior || 1.5 : 1 / (material.ior || 1.5),
-            cosTheta1 = -dotProduct(rayDirection, normal),
-            transmissionDiscriminant = 1 - eta * eta * (1 - cosTheta1 * cosTheta1),
-            normalReflectance = ((1 - (material.ior || 1.5)) / (1 + (material.ior || 1.5))) ** 2,
-            fresnelReflectance =
-              transmissionDiscriminant < 0
-                ? 1
-                : normalReflectance + (1 - normalReflectance) * (1 - cosTheta1) ** 5;
-          pixelColour = addVectors(
-            scaleVector(pixelColour, 1 - kt),
-            scaleVector(
-              traceRay(
-                shadowRayOrigin,
-                reflectedDirection(rayDirection, normal),
-                world,
-                depth + 1,
-                maxDepth,
-              ),
-              transmissionDiscriminant < 0 ? 1 : kr + (1 - kr) * fresnelReflectance,
-            ),
-          );
-          if (transmissionDiscriminant >= 0) {
-            const transmittedDirection = normalise(
-              addVectors(
-                scaleVector(rayDirection, eta),
-                scaleVector(normal, eta * cosTheta1 - Math.sqrt(transmissionDiscriminant)),
-              ),
+          if (!clipped)
+            error(
+              face.line,
+              "cannot triangulate polygon. Export simple, non-self-intersecting triangulated faces.",
             );
-            pixelColour = addVectors(
-              pixelColour,
-              scaleVector(
-                traceRay(
-                  subtractVectors(hitPoint, scaleVector(normal, kEpsilon * 4)),
-                  transmittedDirection,
-                  world,
-                  depth + 1,
-                  maxDepth,
-                ),
-                kt * (1 - fresnelReflectance),
-              ),
-            );
-          }
-        } else if (kr > 0)
-          pixelColour = addVectors(
-            scaleVector(pixelColour, 1 - kr),
-            scaleVector(
-              traceRay(
-                shadowRayOrigin,
-                reflectedDirection(rayDirection, normal),
-                world,
-                depth + 1,
-                maxDepth,
-              ),
-              kr,
-            ),
-          );
-        return pixelColour;
-      }
-      /*
-       * Original source: CAMERA_BasicCamera.cs and CAMERA_PinHole.cs
-       * calculateUVW function (to be overridden), calculate orthonormal basis
-       * u,v,w: Orthonormal basis vectors
-       * e: Eye point; l: Lookat point; up: Up vector
-       *
-       * Browser adaptation: orbit and distance controls adjust e before calculating UVW.
-       * Field of view replaces the original view-plane distance d and PixelSize settings.
-       */
-      function calculateUVW(world, orbit, zoom) {
-        const camera = world.camera,
-          lookat = camera.target,
-          eyeOffset = scaleVector(subtractVectors(camera.eye, lookat), zoom),
-          orbitAngle = (orbit * Math.PI) / 180,
-          e = addVectors(lookat, [
-            eyeOffset[0] * Math.cos(orbitAngle) + eyeOffset[2] * Math.sin(orbitAngle),
-            eyeOffset[1],
-            -eyeOffset[0] * Math.sin(orbitAngle) + eyeOffset[2] * Math.cos(orbitAngle),
-          ]),
-          w = normalise(subtractVectors(e, lookat)),
-          u = normalise(crossProduct(camera.up || [0, 1, 0], w)),
-          v = crossProduct(w, u);
-        return {
-          eye: e,
-          w,
-          u,
-          v,
-          f: Math.tan((camera.fov * Math.PI) / 360),
-        };
-      }
-      // CAMERA_PinHole.renderScene: build the scene from the camera's perspective.
-      // Browser addition: a Web Worker sends completed scanline strips to the canvas.
-      onmessage = ({ data }) => {
-        const {
-            scene: world,
-            width: hRes,
-            height: vRes,
-            samples: numSamples,
-            depth: maxDepth,
-            orbit,
-            zoom,
-          } = data,
-          camera = calculateUVW(world, orbit, zoom),
-          sampleGridSize = Math.sqrt(numSamples),
-          renderStart = Date.now();
-        // Iterate through each point in the view plane
-        for (let row = 0; row < vRes; row += 8) {
-          const stripHeight = Math.min(8, vRes - row),
-            screenArray = new Uint8ClampedArray(hRes * stripHeight * 4);
-          for (let stripRow = 0; stripRow < stripHeight; stripRow++)
-            for (let col = 0; col < hRes; col++) {
-              // Trace ray and run through samples (browser: regular subpixel grid).
-              let pixelColour = [0, 0, 0];
-              for (let sampleRow = 0; sampleRow < sampleGridSize; sampleRow++)
-                for (let sampleCol = 0; sampleCol < sampleGridSize; sampleCol++) {
-                  const viewPlaneX =
-                      ((((2 * (col + (sampleCol + 0.5) / sampleGridSize)) / hRes - 1) * hRes) /
-                        vRes) *
-                      camera.f,
-                    viewPlaneY =
-                      (1 - (2 * (row + stripRow + (sampleRow + 0.5) / sampleGridSize)) / vRes) * camera.f,
-                    rayDirection = normalise(
-                      addVectors(
-                        addVectors(scaleVector(camera.u, viewPlaneX), scaleVector(camera.v, viewPlaneY)),
-                        scaleVector(camera.w, -1),
-                      ),
-                    );
-                  pixelColour = addVectors(
-                    pixelColour,
-                    traceRay(camera.eye, rayDirection, world, 0, maxDepth),
-                  );
-                }
-              const pixelOffset = (stripRow * hRes + col) * 4;
-              for (let colourComponent = 0; colourComponent < 3; colourComponent++)
-                screenArray[pixelOffset + colourComponent] =
-                  255 *
-                  Math.pow(Math.max(0, Math.min(1, pixelColour[colourComponent] / numSamples)), 1 / 2.2);
-              // Fill in temp screen buffer; the fourth channel is opacity.
-              screenArray[pixelOffset + 3] = 255;
-            }
-          postMessage(
-            {
-              y: row,
-              rows: stripHeight,
-              pixels: screenArray,
-              percent: Math.round(((row + stripHeight) / vRes) * 100),
-              seconds: (Date.now() - renderStart) / 1000,
-            },
-            [screenArray.buffer],
-          );
         }
-        postMessage({
-          done: true,
-          seconds: (Date.now() - renderStart) / 1000,
-        });
-      };
-      
-    </script>
+        if (polygon.length === 3 && Math.abs(cross(...polygon.map(projected))) > 1e-12) emit(polygon);
+        else skipped++;
+      }
+      if (!triangles.length) throw Error("Mesh contains no non-degenerate triangles.");
+      if (skipped) warnings.add(`Skipped ${skipped} degenerate faces or fragments.`);
+      return { triangles, vertexCount: used.size, faceCount: faces.length, warnings: [...warnings] };
+    }
+    
+  
+  </script>
   <script>
     // Browser interface and scene builders. No C# UI code runs in the browser.
     // Material JSON: color maps to cd; shininess maps to n.
@@ -1511,11 +2073,11 @@
         fail("Camera eye, target and up must define a valid view.");
       if (
         !Array.isArray(s.objects) ||
-        s.objects.length > 500 ||
+        s.objects.length > 50000 ||
         !Array.isArray(s.lights) ||
         s.lights.length > 16
       )
-        fail("Use at most 500 objects and 16 lights.");
+        fail("Use at most 50,000 objects and 16 lights.");
       for (const l of s.lights) {
         if (
           !(l.direction ? nonzero(l.direction) : vec(l.position)) ||
@@ -1556,7 +2118,28 @@
       }
       return s;
     }
-    function stopRendering() {
+    let cameraElevation = 0, previewTimer = null, qualityTimer = null;
+    // Only a completed render unlocks camera gestures and controls.
+    let cameraReady = false;
+    function setCameraReady(ready) {
+      cameraReady = ready;
+      for (const id of ['orbit', 'zoom', 'resetView']) getElement(id).disabled = !ready;
+      canvas.style.cursor = ready ? 'grab' : 'default';
+      if (!ready && drag) {
+        const pointerId = drag.id;
+        drag = null;
+        canvas.classList.remove('dragging');
+        if (canvas.hasPointerCapture(pointerId)) canvas.releasePointerCapture(pointerId);
+      }
+    }
+    function stopRendering(cancelView = true) {
+      setCameraReady(false);
+      if (cancelView) {
+        clearTimeout(previewTimer); clearTimeout(qualityTimer);
+        previewTimer = qualityTimer = null;
+      }
+      cancelOBJImport();
+      cancelMountainGeneration();
       if (renderWorker) {
         renderWorker.terminate();
         renderWorker = null;
@@ -1564,11 +2147,11 @@
       getElement("stop").disabled = true;
       getElement("render").disabled = false;
     }
-    function renderScene() {
-      stopRendering();
+    function renderScene(preview = false) {
+      stopRendering(false);
       try {
         validateWorld(world);
-        const width = +getElement("resolution").value,
+        const width = preview === true ? 240 : +getElement("resolution").value,
           height = (width * 2) / 3;
         canvas.width = width;
         canvas.height = height;
@@ -1591,7 +2174,8 @@
             getElement("status").textContent = d.percent + "% · " + d.seconds.toFixed(1) + " s";
           }
           if (d.done) {
-            stopRendering();
+            stopRendering(false);
+            setCameraReady(true);
             getElement("save").disabled = false;
             getElement("status").textContent =
               width + " × " + height + " · " + d.seconds.toFixed(1) + " s";
@@ -1605,7 +2189,8 @@
           scene: world,
           width,
           height,
-          samples: +getElement("samples").value,
+          samples: preview === true ? 1 : +getElement("samples").value,
+          elevation: cameraElevation,
           depth: +getElement("depth").value,
           orbit: +getElement("orbit").value,
           zoom: +getElement("zoom").value / 100,
@@ -1615,15 +2200,35 @@
         getElement("status").textContent = e.message;
       }
     }
+    // New scene types can register a panel here without changing the layout.
+    const sceneControlPanels = { mountain: 'mountain', obj: 'obj' };
+    function showSceneControls(sceneType) {
+      const panel = sceneControlPanels[sceneType] || 'preset';
+      document.querySelectorAll('[data-scene-panel]').forEach(section => {
+        section.hidden = section.dataset.scenePanel !== panel;
+      });
+    }
     function selectBuildFunction() {
+      stopRendering();
+      const sceneType = getElement('preset').value;
+      showSceneControls(sceneType);
+      if (sceneType === 'mountain') {
+        getElement('mountainGenerate').click();
+        return;
+      }
+      if (sceneType === 'obj') {
+        getElement('status').textContent = 'Choose an OBJ file to replace the current scene.';
+        return;
+      }
       world = buildWorld(getElement("preset").value);
-      getElement("editor").value = JSON.stringify(world, null, 2);
+      syncSceneControls();
       getElement("sceneName").textContent = getElement("preset").selectedOptions[0].textContent;
       getElement("sceneDescription").textContent =
         EXTRA_SCENES[getElement("preset").value]?.description ||
         (getElement("preset").value === "spiral"
           ? "Original Build_TOSSpiral geometry, with wider camera framing."
           : "Browser demonstration scene.");
+      cameraElevation = 0;
       getElement("orbit").value = 0;
       getElement("zoom").value = 100;
       getElement("orbitOut").textContent = "0°";
@@ -1639,7 +2244,17 @@
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
     getElement("preset").onchange = selectBuildFunction;
-    getElement("render").onclick = renderScene;
+    getElement("render").onclick = () => {
+      try {
+        const next = validateWorld(structuredClone(sceneDraft));
+        world = next;
+        getElement('sceneEditStatus').textContent = 'Scene values applied.';
+        stopRendering();
+        renderScene();
+      } catch (error) {
+        getElement('sceneEditStatus').textContent = 'Please correct the scene values: ' + error.message;
+      }
+    };
     getElement("stop").onclick = () => {
       stopRendering();
       getElement("status").textContent = "Stopped — render again to restart.";
@@ -1652,41 +2267,337 @@
     ])
       getElement(id).oninput = () =>
         (getElement(id + "Out").textContent = getElement(id).value + suffix);
-    getElement("apply").onclick = () => {
-      try {
-        const next = validateWorld(JSON.parse(getElement("editor").value));
-        world = next;
-        getElement("sceneName").textContent = "Custom scene";
-        getElement("sceneDescription").textContent = "Custom scene from the JSON editor.";
-        renderScene();
-      } catch (e) {
-        getElement("status").textContent = "Scene error: " + e.message;
+    // OBJ import runs in its own worker and is cancelled by Stop or scene changes.
+    // Keep the current world until parsing and validation succeed.
+    let objImportWorker = null;
+    function cancelOBJImport() {
+      if (objImportWorker) objImportWorker.terminate();
+      objImportWorker = null;
+      getElement("objImport").disabled = false;
+    }
+    function buildOBJWorld(mesh, colour) {
+      const material = createMaterial(colour, { ka: 0.12, kd: 0.75, ks: 0.3, shininess: 100 });
+      return {
+        background: [0, 0, 0],
+        camera: { eye: [7, 4.5, 9], target: [0, 0, 0], fov: 40 },
+        lights: [
+          { position: [-6, 8, 8], intensity: 0.9 },
+          { position: [6, 4, -3], intensity: 0.65, color: [0.6, 0.8, 1] },
+        ],
+        objects: mesh.triangles.map((vertices) => ({ type: "triangle", vertices, material })),
+      };
+    }
+    getElement("objImport").onclick = () => getElement("objFile").click();
+    getElement("objFile").onchange = async () => {
+      const file = getElement("objFile").files[0];
+      getElement("objFile").value = "";
+      if (!file) return;
+      if (file.size > 20 * 1024 * 1024) {
+        getElement("status").textContent = "OBJ exceeds 20 MB. Simplify the mesh before importing.";
+        return;
       }
-    };
-    getElement("export").onclick = () =>
-      downloadFile(
-        new Blob([JSON.stringify(world, null, 2)], {
-          type: "application/json",
-        }),
-        "SharpRay-scene.json",
+      stopRendering();
+      const colour = getElement("objColour")
+        .value.match(/[0-9a-f]{2}/gi)
+        .map((value) => parseInt(value, 16) / 255);
+      const workerURL = URL.createObjectURL(
+        new Blob(
+          [
+            getElement("obj-parser").textContent,
+            "\nonmessage = async ({data}) => { try { const mesh=parseOBJ(await data.text()); postMessage({mesh}); } catch(error) { postMessage({error:error.message}); } };",
+          ],
+          { type: "text/javascript" },
+        ),
       );
-    getElement("import").onclick = () => getElement("file").click();
-    getElement("file").onchange = async () => {
-      try {
-        const f = getElement("file").files[0];
-        if (!f) return;
-        if (f.size > 2000000) throw Error("Scene file exceeds 2 MB.");
-        const next = validateWorld(JSON.parse(await f.text()));
-        world = next;
-        getElement("editor").value = JSON.stringify(world, null, 2);
-        getElement("sceneName").textContent = f.name;
-        getElement("sceneDescription").textContent = "Imported JSON scene.";
-        renderScene();
-      } catch (e) {
-        getElement("status").textContent = "Import error: " + e.message;
+      const importer = new Worker(workerURL);
+      URL.revokeObjectURL(workerURL);
+      objImportWorker = importer;
+      getElement("objImport").disabled = true;
+      getElement("stop").disabled = false;
+      getElement("status").textContent = "Importing OBJ…";
+      function failed(message) {
+        if (objImportWorker !== importer) return;
+        cancelOBJImport();
+        getElement("stop").disabled = true;
+        getElement("status").textContent = "OBJ import failed: " + message;
       }
-      getElement("file").value = "";
+      importer.onerror = (event) => failed(event.message);
+      importer.onmessage = ({ data }) => {
+        if (objImportWorker !== importer) return;
+        if (data.error) {
+          failed(data.error);
+          return;
+        }
+        try {
+          const next = validateWorld(buildOBJWorld(data.mesh, colour));
+          cancelOBJImport();
+          world = next;
+          getElement("preset").value = "obj";
+          showSceneControls("obj");
+          cameraElevation = 0;
+      getElement("orbit").value = 0;
+          getElement("orbitOut").textContent = "0°";
+          getElement("zoom").value = 100;
+          getElement("zoomOut").textContent = "100%";
+          syncSceneControls();
+          getElement("sceneName").textContent = file.name;
+          getElement("sceneDescription").textContent =
+            `Imported OBJ: ${data.mesh.vertexCount.toLocaleString()} vertices, ${data.mesh.triangles.length.toLocaleString()} triangles. Centred and scaled to fit; Y is up. ` +
+            data.mesh.warnings.join(" ");
+          // Start with a quick draft; all quality settings remain available afterwards.
+          getElement("resolution").value = "480";
+          getElement("samples").value = "1";
+          renderScene();
+        } catch (error) {
+          failed(error.message);
+        }
+      };
+      importer.postMessage(file);
     };
+
+    // Generate off the UI thread. Stop, imports and scene changes cancel pending work.
+    let mountainWorker = null;
+    function cancelMountainGeneration() {
+      if (mountainWorker) mountainWorker.terminate();
+      mountainWorker = null;
+      getElement("mountainGenerate").disabled = false;
+    }
+    getElement("mountainRandom").onclick = () => {
+      getElement("mountainSeed").value = crypto.getRandomValues(new Int32Array(1))[0];
+    };
+    getElement("mountainGenerate").onclick = () => {
+      stopRendering();
+      const request = {
+        detailLevel: +getElement("mountainDetail").value,
+        roughness: +getElement("mountainRoughness").value,
+        seed: +getElement("mountainSeed").value,
+        palette: getElement("mountainPalette").value,
+        snowLine: +getElement("mountainSnow").value / 100,
+        water: getElement("mountainWater").checked,
+        waterLevel: +getElement("mountainWaterLevel").value,
+      };
+      const url = URL.createObjectURL(
+        new Blob(
+          [
+            getElement("mountain-generator").textContent,
+            "\nonmessage=({data})=>{try{postMessage({world:buildMountainWorld(data)});}catch(error){postMessage({error:error.message});}};",
+          ],
+          { type: "text/javascript" },
+        ),
+      );
+      const worker = new Worker(url);
+      URL.revokeObjectURL(url);
+      mountainWorker = worker;
+      getElement("mountainGenerate").disabled = true;
+      getElement("stop").disabled = false;
+      getElement("status").textContent = "Generating mountain…";
+      function failed(message) {
+        if (mountainWorker !== worker) return;
+        cancelMountainGeneration();
+        getElement("stop").disabled = true;
+        getElement("status").textContent = "Mountain generation failed: " + message;
+      }
+      worker.onerror = (event) => failed(event.message);
+      worker.onmessage = ({ data }) => {
+        if (mountainWorker !== worker) return;
+        if (data.error) {
+          failed(data.error);
+          return;
+        }
+        try {
+          const next = validateWorld(data.world);
+          cancelMountainGeneration();
+          world = next;
+          getElement("preset").value = "mountain";
+          showSceneControls("mountain");
+          cameraElevation = 0;
+      getElement("orbit").value = 0;
+          getElement("orbitOut").textContent = "0°";
+          getElement("zoom").value = 100;
+          getElement("zoomOut").textContent = "100%";
+          getElement("sceneName").textContent = request.palette + " mountain";
+          getElement("sceneDescription").textContent =
+            `MountainGen-HTML · seed ${request.seed} · ${(4 ** request.detailLevel).toLocaleString()} terrain triangles · roughness ${request.roughness}.`;
+          syncSceneControls();
+          getElement("resolution").value = "480";
+          getElement("samples").value = "1";
+          renderScene();
+        } catch (error) {
+          failed(error.message);
+        }
+      };
+      worker.postMessage(request);
+    };
+
+
+    // Apply camera changes only after a completed render. Render once the
+    // gesture ends, rather than repeatedly interrupting an active render.
+    let drag = null;
+    function updateViewControls() {
+      getElement('orbitOut').textContent = getElement('orbit').value + '°';
+      getElement('zoomOut').textContent = getElement('zoom').value + '%';
+    }
+    function scheduleViewRender(finish = true) {
+      if (!cameraReady) return;
+      clearTimeout(qualityTimer);
+      qualityTimer = null;
+      updateViewControls();
+      if (finish) qualityTimer = setTimeout(() => {
+        qualityTimer = null;
+        if (cameraReady) renderScene();
+      }, 200);
+    }
+    canvas.addEventListener('pointerdown', event => {
+      if(!cameraReady || event.button !== 0 || drag) return;
+      clearTimeout(qualityTimer); qualityTimer = null;
+      drag = {id:event.pointerId,x:event.clientX,y:event.clientY};
+      canvas.setPointerCapture(event.pointerId);
+      canvas.classList.add('dragging');
+    });
+    canvas.addEventListener('pointermove', event => {
+      if(!cameraReady || !drag || drag.id !== event.pointerId) return;
+      const dx=event.clientX-drag.x, dy=event.clientY-drag.y;
+      drag.x=event.clientX; drag.y=event.clientY;
+      getElement('orbit').value = ((+getElement('orbit').value + dx*0.5 + 540) % 360)-180;
+      const eye=world.camera.eye, target=world.camera.target;
+      const base=Math.atan2(eye[1]-target[1],Math.hypot(eye[0]-target[0],eye[2]-target[2]))*180/Math.PI;
+      cameraElevation=Math.max(-89-base,Math.min(89-base,cameraElevation+dy*0.4));
+      scheduleViewRender(false);
+    });
+    function finishDrag(event) {
+      if(!cameraReady || !drag || drag.id !== event.pointerId) return;
+      drag=null; canvas.classList.remove('dragging');
+      if(canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+      scheduleViewRender();
+    }
+    canvas.addEventListener('pointerup',finishDrag);
+    canvas.addEventListener('pointercancel',finishDrag);
+    canvas.addEventListener('lostpointercapture',finishDrag);
+    canvas.addEventListener('wheel',event=>{
+      event.preventDefault();
+      if (!cameraReady) return;
+      const delta=event.deltaY*(event.deltaMode===1?16:event.deltaMode===2?canvas.clientHeight:1);
+      const zoom=getElement('zoom');
+      zoom.value=Math.round(Math.max(+zoom.min,Math.min(+zoom.max,+zoom.value*Math.exp(delta*0.001))));
+      scheduleViewRender();
+    },{passive:false});
+    function resetView() {
+      if (!cameraReady) return;
+      stopRendering(); cameraElevation=0;
+      getElement('orbit').value=0; getElement('zoom').value=100;
+      updateViewControls(); renderScene();
+    }
+    canvas.addEventListener('dblclick',resetView);
+    getElement('resetView').onclick=resetView;
+    for(const id of ['orbit','zoom']) {
+      getElement(id).addEventListener('input',()=>scheduleViewRender());
+    }
+
+
+    // A separate draft keeps edits out of the active render until Render scene.
+    // Only the selected object's fields are mounted, even for large terrain meshes.
+    let sceneDraft = null;
+    const editLabels = {
+      background:'Background colour', eye:'Camera position', target:'Look-at point', up:'Up vector',
+      fov:'Field of view (degrees)', position:'Position', direction:'Direction', color:'Colour (RGB)',
+      color2:'Secondary colour (RGB)', intensity:'Intensity', radius:'Radius', radii:'Radii',
+      size:'Size', height:'Height', normal:'Surface normal', vertices:'Triangle vertices',
+      ka:'Ambient (ka)', kd:'Diffuse (kd)', ks:'Specular (ks)', kr:'Reflection (kr)',
+      kt:'Transmission (kt)', ior:'Refractive index (ior)', shininess:'Shininess',
+      scale:'Texture scale', texture:'Texture', material:'Material', camera:'Camera'
+    };
+    function editGroup(parent, title) {
+      const group = document.createElement('fieldset');
+      group.className = 'edit-group';
+      const legend = document.createElement('legend'); legend.textContent = title;
+      group.append(legend); parent.append(group); return group;
+    }
+    function editField(parent, owner, key, title = editLabels[key] || key) {
+      const value = owner[key];
+      // Convert the renderer's 0–1 RGB arrays only when the picker is edited.
+      // Untouched colours retain their original precision in the scene draft.
+      if (['background', 'color', 'color2'].includes(key) && Array.isArray(value)) {
+        const label = document.createElement('label');
+        label.append(document.createTextNode(title.replace(' (RGB)', '')));
+        const input = document.createElement('input');
+        input.type = 'color';
+        input.value = '#' + value.map(channel =>
+          Math.round(Math.max(0, Math.min(1, channel)) * 255).toString(16).padStart(2, '0')
+        ).join('');
+        input.addEventListener('input', () => {
+          owner[key] = [1, 3, 5].map(start => parseInt(input.value.slice(start, start + 2), 16) / 255);
+          getElement('sceneEditStatus').textContent = 'Unapplied changes — press Render scene.';
+        });
+        label.append(input); parent.append(label);
+        return;
+      }
+      if (Array.isArray(value) && value.every(n => typeof n === 'number')) {
+        const group = editGroup(parent, title), row = document.createElement('div');
+        row.className = 'edit-vector'; group.append(row);
+        value.forEach((_,i) => editField(row,value,i,
+          ['color','color2','background'].includes(key) ? ['Red','Green','Blue'][i] : ['X','Y','Z'][i] || String(i+1)));
+        return;
+      }
+      if (value && typeof value === 'object') {
+        const group = editGroup(parent, title);
+        Object.keys(value).forEach(child => editField(group,value,child,
+          Array.isArray(value) ? 'Vertex '+(Number(child)+1) : editLabels[child] || child));
+        return;
+      }
+      const label = document.createElement('label'); label.append(document.createTextNode(title));
+      let input;
+      if (key === 'texture') {
+        input = document.createElement('select');
+        for (const [v,text] of [['','Solid colour'],['checker','Checker'],['marble','Marble'],['wood','Wood']]) {
+          const option = document.createElement('option'); option.value=v; option.textContent=text; input.append(option);
+        }
+        input.value = value || '';
+      } else {
+        input = document.createElement('input');
+        input.type = typeof value === 'number' ? 'number' : typeof value === 'boolean' ? 'checkbox' : 'text';
+        if (input.type === 'number') { input.step='any'; input.required=true; }
+        if (input.type === 'checkbox') input.checked=value; else input.value=value;
+        // Geometry type remains fixed so its required fields always match.
+        if (key === 'type') input.readOnly=true;
+      }
+      input.addEventListener('input',()=>{
+        owner[key] = input.type === 'number' ? input.valueAsNumber : input.type === 'checkbox' ? input.checked : input.value;
+        getElement('sceneEditStatus').textContent='Unapplied changes — press Render scene.';
+      });
+      label.append(input); parent.append(label);
+    }
+    function showObjectFields() {
+      const host=getElement('objectFields'), indexInput=getElement('editObjectIndex');
+      host.replaceChildren();
+      const index=Number(indexInput.value)-1;
+      if (!Number.isInteger(index) || index<0 || index>=sceneDraft.objects.length) return;
+      const object=sceneDraft.objects[index];
+      object.material = {color:[0.7,0.7,0.7],color2:[0.06,0.08,0.1],ka:0.12,kd:0.7,ks:0.35,
+        kr:0,kt:0,ior:1.5,shininess:100,scale:1,texture:'',...object.material};
+      Object.keys(object).forEach(key=>editField(host,object,key));
+    }
+    function syncSceneControls() {
+      sceneDraft=structuredClone(world);
+      sceneDraft.camera.up ||= [0,1,0];
+      const host=getElement('worldFields'); host.replaceChildren();
+      editField(host,sceneDraft,'background'); editField(host,sceneDraft,'camera');
+      const lights=getElement('lightFields'); lights.replaceChildren();
+      sceneDraft.lights.forEach((light,index)=>{
+        light.color ||= [1,1,1]; light.intensity ??= 1;
+        const group=editGroup(lights,'Light '+(index+1)); group.classList.add('edit-grid');
+        // Use a consistent layout regardless of property order in the scene.
+        const fieldOrder = ['position', 'direction', 'color', 'intensity'];
+        fieldOrder.filter(key => key in light).forEach(key => editField(group, light, key));
+        Object.keys(light).filter(key => !fieldOrder.includes(key))
+          .forEach(key => editField(group, light, key));
+      });
+      const picker=getElement('editObjectIndex'); picker.value=1;
+      picker.max=sceneDraft.objects.length; picker.disabled=!sceneDraft.objects.length;
+      getElement('editObjectCount').textContent='of '+sceneDraft.objects.length.toLocaleString();
+      getElement('sceneEditStatus').textContent=''; showObjectFields();
+    }
+    getElement('editObjectIndex').addEventListener('input',showObjectFields);
+
     selectBuildFunction();
   </script>
 </html>
