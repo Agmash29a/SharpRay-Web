@@ -1,4 +1,4 @@
-# SharpRay Web
+# MountainRay
 
 A self-contained browser adaptation of Riley T. Perry's original 2004 C# ray tracer, [SharpRay](https://github.com/Agmash29a/SharpRay).
 
@@ -16,10 +16,10 @@ Choose a scene and render settings, then select **Render scene**. **Stop** cance
 - Recursive reflections, Snell refraction with Fresnel blending, Phong shading and shadows.
 - Spheres, ellipsoids, planes, boxes, triangles, discs and open cylinders.
 - Checkerboard, marble and wood procedural textures.
-- Drag to spin and tilt, wheel to zoom, and double-click or Reset view to restore the camera. Camera controls remain locked until a render completes.
+- Drag to spin and tilt, wheel to zoom, and double-click or Reset view to restore the camera. Camera controls remain locked during rendering and after completion until the user clicks the render surface to unlock them. A warning explains that camera changes replace the rendered image.
 - Supersampling and adjustable recursion depth.
-- Background-worker rendering with progress reporting.
-- Full-width padded black render view with a compact white interface. Scene information, scene-specific controls and Render Studio sit below the image.
+- Background-worker rendering with light progress text, a layered crimson shimmer and reduced-motion support.
+- Full-width padded black render view with a compact slate interface with crimson buttons and red accents. Scene information, scene-specific controls and Render Studio sit below the image.
 - Collapsed-by-default scene editor with object selection for large meshes; no JSON import/export UI.
 
 ## Reading the source
