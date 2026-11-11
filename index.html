@@ -1,17 +1,24 @@
+<!-- [</>] MICROSITE (html + js) -- Chillers of Entropy -->
 <!doctype html>
 <html lang="en">
   <!--
-  SharpRay browser edition — source guide
+    MountainRay / Reading the source
 
-  Styles: base controls, light theme, render layout, scene editor, surface protection.
-  Interface: render surface, scene selector, generator controls, Render Studio.
-  Embedded workers: mountain-generator, engine, obj-parser.
-  Application: scene builders, validation, rendering, import/generation, camera, editor.
+    To follow one pixel, start at CAMERA_PinHole.renderScene in the engine script.
+    calculateUVW gives the camera its axes. traceRay sends a ray through the pixel.
+    hitObjects finds the closest surface, then getColour supplies its colour for shading.
+    Follow the completed strip of pixels back to renderScene in the browser script.
 
-  Worker scripts are stored as plain text and launched through Blob URLs.
-  Keep this file self-contained so it can run offline without a build step.
-  Original SharpRay terminology, source comments and attributions are retained.
--->
+    To follow one mountain, start at TerrainGenerator.Generate in mountain-generator.
+    DivideLine makes the new vertices. MakeTriangle connects them. makeTerrainGeometry
+    assigns the surfaces that appear as Rock, Water, Snow and Vegetation in the editor.
+
+    To follow an imported mesh, start at parseOBJ in obj-parser. Once the vertices and
+    faces become triangles, they travel through the same hitObjects code as a mountain.
+
+    The markup and styles come first. The three plain-text scripts hold worker code.
+    The last script runs the controls and sends each job to its worker.
+  -->
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>MountainRay — browser ray tracer</title>
@@ -240,7 +247,7 @@
     canvas.dragging {
       cursor: grabbing;
     }
-    
+
     /* Full-width render, with scene and render controls below it. */
     header {
       padding: 8px 16px;
@@ -429,12 +436,38 @@
       cursor: pointer;
       background: #2c3845;
     }
-    
+
     /* Render surface: progress overlay, animation and explicit camera unlock. */
     .render-surface {
       position: relative;
       overflow: hidden;
       border-radius: 9px;
+    }
+    /* Each glint is one short crest. Let it grow, drift and fade before
+       placing it somewhere else on the water. The parent clips the shoreline. */
+    #waterShimmer {
+      position: absolute;
+      inset: 1px;
+      overflow: hidden;
+      pointer-events: none;
+      mask-size: 100% 100%;
+      mask-repeat: no-repeat;
+    }
+    .water-glint {
+      position: absolute;
+      border-radius: 50%;
+      background: radial-gradient(ellipse, #edffff 0%, #c1e7f688 38%, transparent 72%);
+      opacity: 0;
+      animation: water-glint var(--lifetime) ease-in-out infinite;
+    }
+    @keyframes water-glint {
+      0%, 100% { opacity: 0; }
+      0% { transform: translate(-25%, 0) rotate(var(--angle)) scaleX(.45); }
+      45% { opacity: var(--brightness); }
+      100% { transform: translate(35%, 1px) rotate(var(--angle)) scaleX(1.15); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #waterShimmer { display: none; }
     }
     .render-overlay {
       position: absolute;
@@ -560,6 +593,15 @@
       border-radius: 6px;
       font-size: 13px;
     }
+    .material-pickers {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+      gap: 10px;
+    }
+    .material-pickers fieldset { min-width: 0; margin: 0; }
+    .material-pickers input[type=file] { width: 100%; }
+    .material-pickers canvas { width: 72px; height: 48px; object-fit: contain; }
+    .material-pickers p { overflow-wrap: anywhere; }
     /* Native inputs and editor groups use the same dark surfaces. */
     body {
       background: #242e39;
@@ -593,7 +635,7 @@
     <div>
       <h1>Mountain<span>Ray</span></h1>
     </div>
-    <small>Recursive ray tracing · entirely offline</small>
+    <small>MICROSITE (html + js) -- Chillers of Entropy --</small>
   </header>
   <main>
     <section class="stage">
@@ -605,6 +647,7 @@
           height="600"
           aria-label="Ray-traced scene"
         ></canvas>
+        <div id="waterShimmer" aria-hidden="true" hidden></div>
         <div id="renderOverlay" class="render-overlay">
           <div id="renderActivity" role="status" class="render-badge">Ready to render</div>
           <button
@@ -662,7 +705,7 @@
             <option value="pyramid">The golden stack</option>
           </optgroup>
           <optgroup label="Create a scene">
-            <option value="mountain">Mountain generator</option>
+            <option value="mountain" selected>Mountain generator</option>
             <option value="obj">Imported OBJ model</option>
           </optgroup>
         </select>
@@ -693,9 +736,9 @@
               <option value="2">2 · 16 triangles</option>
               <option value="3">3 · 64 triangles</option>
               <option value="4">4 · 256 triangles</option>
-              <option value="5" selected>5 · 1,024 triangles</option>
+              <option value="5">5 · 1,024 triangles</option>
               <option value="6">6 · 4,096 triangles</option>
-              <option value="7">7 · 16,384 triangles</option>
+              <option value="7" selected>7 · 16,384 triangles</option>
             </select>
             <label for="mountainRoughness">Roughness (0.2–2.5)</label>
             <input id="mountainRoughness" type="number" min="0.2" max="2.5" step="0.05" value="1" />
@@ -731,6 +774,7 @@
             </p>
           </section>
         </div>
+        <section id="imageMaterials" aria-label="Image materials"></section>
       </aside>
       <section class="studio">
         <h2>Render Studio</h2>
@@ -768,9 +812,9 @@
           <div class="control">
             <label for="zoom">
               Camera distance
-              <output id="zoomOut">100%</output>
+              <output id="zoomOut">30%</output>
             </label>
-            <input id="zoom" type="range" min="40" max="200" value="100" />
+            <input id="zoom" type="range" min="10" max="200" value="30" />
           </div>
         </div>
         <details class="scene-edit">
@@ -824,10 +868,10 @@
         </p>
         <p>
           Includes spheres, ellipsoids, planes, boxes, triangles, discs and open cylinders;
-          point/directional lights; checker, marble and wood textures. New browser conveniences
+          point/directional lights; checker, marble, wood and uploaded image textures. New browser conveniences
           include orbit controls, PNG export and editable scene controls. Noise textures and glass
           Fresnel blending are new approximations. This is a core adaptation, not a complete port:
-          legacy PLY loading, torus quartics, transformed instances, image textures and the full
+          legacy PLY loading, torus quartics, transformed instances and the full
           original scene catalogue are not included. Glass casts opaque shadows; no caustics or
           global illumination.
         </p>
@@ -839,7 +883,7 @@
     </section>
   </main>
   <script id="mountain-generator" type="text/plain">
-    
+
     // TerrainGenerator and legacy comments from MountainGen-HTML.
     const PRESETS = {
       Alpine: { rock: "#77838c", snow: "#f1f7f8", vegetation: "#4a9576", water: "#3380a7" },
@@ -887,6 +931,8 @@
             subdivided = [];
           // Early subdivisions create broad mountains; later ones add smaller detail.
           const amplitude = 230 * Math.pow(0.51, depth) * roughness;
+          // Two faces meet along each interior edge. Reuse their midpoint so both
+          // faces get the same height and their edges still meet after displacement.
           function DivideLine(a, b) {
             const lo = Math.min(a, b),
               hi = Math.max(a, b),
@@ -913,7 +959,7 @@
           }
           function MakeTriangle(a, b, c) {
             const [ab, bc, ca] = Make_Sides(a, b, c);
-            // Four congruent children, preserving triangle winding.
+            // Join the three midpoints to make four children with the same winding.
             subdivided.push([a, ab, ca], [ab, b, bc], [ca, bc, c], [ab, bc, ca]);
           }
           for (const [a, b, c] of faces) MakeTriangle(a, b, c);
@@ -977,6 +1023,7 @@
         const variance = surface === "rock" ? 0.88 + hash01((t / 3) * 53 + terrain.seed) * 0.24 : 1;
         objects.push({
           type: "triangle",
+          terrainSurface: surface,
           vertices: vertices.map((p) => p.map((n) => n / 100)),
           material: {
             color: colour(palette[surface]).map((n) => Math.min(1, n * variance)),
@@ -992,6 +1039,7 @@
         const y = (request.waterLevel + 0.15) / 100;
         objects.push({
           type: "triangle",
+          terrainSurface: "water",
           vertices: [
             [-6, y, -6],
             [0, y, 6],
@@ -1034,19 +1082,21 @@
           { position: [-30, 60, 40], intensity: 1 },
           { position: [30, 20, -20], intensity: 0.3, color: [0.65, 0.8, 1] },
         ],
+        rockImagesOnly: true,
+        terrainImages: {},
         objects: makeTerrainGeometry(terrain, request),
       };
     }
-  
+
   </script>
   <script id="engine" type="text/plain">
-    
+
     // (c) 2004 by Riley T. Perry - Chillers of Entropy
     // SharpRay browser adaptation. Original comments are attributed by source file.
     // Vector3D and RGBColour are represented by [x,y,z] and [r,g,b] arrays.
     // Ray.o and Ray.d are passed as rayOrigin and rayDirection.
     // World.worldObjects / worldLights are stored as JSON objects / lights.
-    // Preserve those JSON field names so previously exported scenes still load.
+    // For example, world.objects[0] is the first object tested in a small scene.
 
     // Adapted from SharpRay by Riley T. Perry (2004), commit 8b16f787edd2bf5595f8b37c2ab01fd54b59002a.
     const addVectors = (a, b) => a.map((v, i) => v + b[i]),
@@ -1278,6 +1328,34 @@
       }
       return shading;
     }
+    // Sample a picture at the hit point. For a top projection, X runs across
+    // the picture and Z runs up it. A tile size of 2 repeats every two world units.
+    function sampleImageMaterial(imageMaterial, hitPoint, colour1) {
+      const image = imageMaterial.image;
+      const tileSize = imageMaterial.scale || 1;
+      const axes = { xz: [0, 2], xy: [0, 1], yz: [2, 1] }[imageMaterial.imagePlane || "xz"];
+      const wrap = (value) => value - Math.floor(value);
+      const x = Math.floor(wrap(hitPoint[axes[0]] / tileSize) * image.width);
+      const y = Math.min(image.height - 1,
+        Math.floor((1 - wrap(hitPoint[axes[1]] / tileSize)) * image.height));
+      const offset = (y * image.width + x) * 4;
+      // A transparent texel lets the original surface colour show through.
+      const alpha = image.pixels[offset + 3] / 255;
+      return colour1.map((base, channel) =>
+        base * (1 - alpha) + image.pixels[offset + channel] / 255 * alpha);
+    }
+
+    // A snow image wins on a snow triangle. If that slot is empty, the rock
+    // image can cover it only when the user has cleared the bare-rock checkbox.
+    function selectImageMaterial(world, object, material) {
+      const surfaces = world.terrainImages;
+      if (!surfaces) return material;
+      const surface = surfaces[object.terrainSurface];
+      if (surface?.image) return surface;
+      if (!world.rockImagesOnly && surfaces.rock?.image) return surfaces.rock;
+      return material;
+    }
+
     /*
      * Original source: TEXTURE_CheckerBoard.cs
      * - CheckerBoard Texutre class
@@ -1288,10 +1366,12 @@
      * XOR pattern, with a small boundary offset to avoid floating-point flicker.
      * The marble and wood noise below are browser additions, not the original noise classes.
      */
-    function getColour(material, hitPoint) {
+    function getColour(material, hitPoint, imageMaterial = material) {
       const colour1 = material.color || [0.7, 0.7, 0.7],
         colour2 = material.color2 || [0.06, 0.08, 0.1],
         scale = material.scale || 1;
+      if (imageMaterial.texture === "image" && imageMaterial.image)
+        return sampleImageMaterial(imageMaterial, hitPoint, colour1);
       if (material.texture === "checker") {
         return ((hitPoint.reduce((s, x) => s + Math.floor((x + 1e-7) / scale), 0) % 2) + 2) % 2
           ? colour1
@@ -1333,15 +1413,18 @@
      * offsets and energy-weighted reflection differ from the original additive shading.
      * Glass shadows are opaque; this renderer does not calculate caustics.
      */
-    function traceRay(rayOrigin, rayDirection, world, depth, maxDepth) {
+    function traceRay(rayOrigin, rayDirection, world, depth, maxDepth, waterCoverage) {
       if (depth > maxDepth) return [0, 0, 0];
       const shading = hitObjects(rayOrigin, rayDirection, world.objects);
       if (!shading) return world.background;
+      // Count visible water only on camera rays. Reflections keep their own colours.
+      if (waterCoverage && shading.s.terrainSurface === "water") waterCoverage.samples++;
       const hitPoint = addVectors(rayOrigin, scaleVector(rayDirection, shading.t)),
         insideObject = dotProduct(rayDirection, shading.n) > 0,
         normal = insideObject ? scaleVector(shading.n, -1) : shading.n,
         material = shading.s.material || {},
-        cd = getColour(material, hitPoint),
+        imageMaterial = selectImageMaterial(world, shading.s, material),
+        cd = getColour(material, hitPoint, imageMaterial),
         shadowRayOrigin = addVectors(hitPoint, scaleVector(normal, kEpsilon * 4));
       let pixelColour = scaleVector(cd, material.ka ?? 0.12);
       // Illumination loop
@@ -1482,6 +1565,82 @@
         f: Math.tan((camera.fov * Math.PI) / 360),
       };
     }
+    // Draw the construction lines through the same pinhole camera used by traceRay.
+    function projectWireframe(world, camera, width, height) {
+      const lines = [];
+      const focalLength = height / (2 * camera.f);
+      function cameraPoint(point) {
+        const offset = subtractVectors(point, camera.eye);
+        return [dotProduct(offset, camera.u), dotProduct(offset, camera.v), -dotProduct(offset, camera.w)];
+      }
+      function edge(start, end) {
+        let a = cameraPoint(start), b = cameraPoint(end);
+        const near = 0.01;
+        if (a[2] > b[2]) [a, b] = [b, a];
+        if (b[2] < near) return;
+        if (a[2] < near) {
+          const fraction = (near - a[2]) / (b[2] - a[2]);
+          a = a.map((value, axis) => value + fraction * (b[axis] - value));
+        }
+        for (const point of [a, b])
+          lines.push(width / 2 + focalLength * point[0] / point[2],
+                     height / 2 - focalLength * point[1] / point[2]);
+      }
+      function curve(pointAt, steps, angle = 2 * Math.PI) {
+        let previous = pointAt(0);
+        for (let step = 1; step <= steps; step++) {
+          const next = pointAt(angle * step / steps);
+          edge(previous, next);
+          previous = next;
+        }
+      }
+      for (const object of world.objects) {
+        const centre = object.position || [0, 0, 0];
+        const point = (x, y, z) => addVectors(centre, [x, y, z]);
+        if (object.type === "triangle") {
+          const [a, b, c] = object.vertices;
+          edge(a, b); edge(b, c); edge(c, a);
+        } else if (object.type === "box") {
+          const corner = bits => centre.map((value, axis) =>
+            value + ((bits & (1 << axis)) ? 0.5 : -0.5) * object.size[axis]);
+          for (let bits = 0; bits < 8; bits++)
+            for (let axis = 0; axis < 3; axis++)
+              if (!(bits & (1 << axis))) edge(corner(bits), corner(bits | (1 << axis)));
+        } else if (object.type === "sphere" || object.type === "ellipsoid") {
+          const [x, y, z] = object.radii || Array(3).fill(object.radius);
+          const surface = (latitude, longitude) => point(
+            x * Math.cos(latitude) * Math.cos(longitude), y * Math.sin(latitude),
+            z * Math.cos(latitude) * Math.sin(longitude));
+          for (let ring = -2; ring <= 2; ring++)
+            curve(angle => surface(ring * Math.PI / 6, angle), 24);
+          for (let meridian = 0; meridian < 8; meridian++)
+            curve(angle => surface(angle - Math.PI / 2, meridian * Math.PI / 4), 12, Math.PI);
+        } else if (object.type === "cylinder") {
+          const rim = (angle, side) => point(object.radius * Math.cos(angle),
+            side * object.height / 2, object.radius * Math.sin(angle));
+          for (const side of [-1, 1]) curve(angle => rim(angle, side), 24);
+          for (let i = 0; i < 8; i++) edge(rim(i * Math.PI / 4, -1), rim(i * Math.PI / 4, 1));
+        } else {
+          // A disc has a rim. Show an infinite plane as a finite reference grid.
+          const normal = normalise(object.normal);
+          const across = normalise(crossProduct(normal, Math.abs(normal[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0]));
+          const along = crossProduct(normal, across);
+          const planar = (x, y) => addVectors(centre, addVectors(scaleVector(across, x), scaleVector(along, y)));
+          if (object.type === "disc") {
+            curve(angle => planar(object.radius * Math.cos(angle), object.radius * Math.sin(angle)), 32);
+          } else {
+            const span = Math.max(2, Math.hypot(...subtractVectors(camera.eye, centre)));
+            for (let i = -5; i <= 5; i++) {
+              const offset = span * i / 5;
+              edge(planar(offset, -span), planar(offset, span));
+              edge(planar(-span, offset), planar(span, offset));
+            }
+          }
+        }
+      }
+      return new Float32Array(lines);
+    }
+
     // CAMERA_PinHole.renderScene: build the scene from the camera's perspective.
     // Browser addition: a Web Worker sends completed scanline strips to the canvas.
     onmessage = ({ data }) => {
@@ -1497,8 +1656,16 @@
         camera = calculateUVW(world, orbit, zoom, data.elevation || 0),
         sampleGridSize = Math.sqrt(numSamples),
         renderStart = Date.now();
-      // Iterate through each point in the view plane
+      const wireframe = projectWireframe(world, camera, hRes, vRes);
+      postMessage({ wireframe }, [wireframe.buffer]);
+      // Group nearby triangles once. All rays in this render can skip a group
+      // when they miss its bounding box, including rays cast towards a light.
       buildTriangleBVH(world.objects);
+      // Record water coverage alongside the finished image, using the same camera samples.
+      const hasWater = world.objects.some(object => object.terrainSurface === "water");
+      const waterMask = hasWater ? new Uint8ClampedArray(hRes * vRes) : null;
+      const waterCoverage = hasWater ? { samples: 0 } : null;
+      // Iterate through each point in the view plane
       for (let row = 0; row < vRes; row += 8) {
         const stripHeight = Math.min(8, vRes - row),
           screenArray = new Uint8ClampedArray(hRes * stripHeight * 4);
@@ -1506,6 +1673,7 @@
           for (let col = 0; col < hRes; col++) {
             // Trace ray and run through samples (browser: regular subpixel grid).
             let pixelColour = [0, 0, 0];
+            if (waterCoverage) waterCoverage.samples = 0;
             for (let sampleRow = 0; sampleRow < sampleGridSize; sampleRow++)
               for (let sampleCol = 0; sampleCol < sampleGridSize; sampleCol++) {
                 const viewPlaneX =
@@ -1521,9 +1689,12 @@
                   );
                 pixelColour = addVectors(
                   pixelColour,
-                  traceRay(camera.eye, rayDirection, world, 0, maxDepth),
+                  traceRay(camera.eye, rayDirection, world, 0, maxDepth, waterCoverage),
                 );
               }
+            if (waterMask)
+              waterMask[(row + stripRow) * hRes + col] = 255 * waterCoverage.samples / numSamples;
+            // Average the samples in linear colour before converting to display values.
             const pixelOffset = (stripRow * hRes + col) * 4;
             for (let colourComponent = 0; colourComponent < 3; colourComponent++)
               screenArray[pixelOffset + colourComponent] =
@@ -1545,13 +1716,14 @@
       }
       postMessage({
         done: true,
+        waterMask,
         seconds: (Date.now() - renderStart) / 1000,
       });
     };
-  
+
   </script>
   <script id="obj-parser" type="text/plain">
-    
+
     /* Browser addition: Wavefront OBJ geometry importer.
      * Original SharpRay used World.ReadInPLYFile for external triangle meshes.
      * OBJ vertex indices are 1-based; negative indices count backwards from the
@@ -1585,6 +1757,8 @@
           if (vertices.length > 200000) error(row + 1, "maximum 200,000 vertices supported.");
         } else if (keyword === "f") {
           if (fields.length < 3 || fields.length > 256) error(row + 1, "faces need 3–256 corners.");
+          // In a face such as "f 1/2/3 2/4/3 3/5/3", the first number at each
+          // corner selects the vertex position. All three corners share a face normal.
           const indices = fields.map((field) => {
             const token = field.split("/")[0];
             if (!/^-?\d+$/.test(token)) error(row + 1, "invalid face vertex index.");
@@ -1726,10 +1900,10 @@
       if (skipped) warnings.add(`Skipped ${skipped} degenerate faces or fragments.`);
       return { triangles, vertexCount: used.size, faceCount: faces.length, warnings: [...warnings] };
     }
-  
+
   </script>
   <script>
-    
+
     // Browser interface and scene builders. No C# UI code runs in the browser.
     // Material JSON: color maps to cd; shininess maps to n.
     // Camera JSON: eye maps to e; target maps to l.
@@ -2536,8 +2710,22 @@
             fail(key + " must be between 0 and 1.");
         for (const key of ["ior", "scale", "shininess"])
           if (m[key] !== undefined && !positive(m[key])) fail(key + " must be positive.");
-        if (m.texture && !["checker", "marble", "wood"].includes(m.texture))
+        if (m.texture && !["checker", "marble", "wood", "image"].includes(m.texture))
           fail("Unsupported texture.");
+        if (m.texture === "image") {
+          const image = m.image;
+          if (!image || !Number.isInteger(image.width) || !Number.isInteger(image.height) ||
+              image.width < 1 || image.height < 1 || image.width > 1024 || image.height > 1024 ||
+              !(image.pixels instanceof Uint8ClampedArray) ||
+              image.pixels.length !== image.width * image.height * 4)
+            fail("Upload a valid image for this material.");
+          if (!["xz", "xy", "yz"].includes(m.imagePlane || "xz"))
+            fail("Invalid image projection.");
+        }
+      }
+      for (const slot of Object.values(s.terrainImages || {})) {
+        if (slot.image && slot.scale !== undefined && !positive(slot.scale))
+          fail("Mountain material tile size must be positive.");
       }
       return s;
     }
@@ -2580,7 +2768,55 @@
         if (canvas.hasPointerCapture(pointerId)) canvas.releasePointerCapture(pointerId);
       }
     }
+    // Turn the water coverage into a CSS mask. Transparent pixels hide the
+    // moving highlights over land and sky. The ray-traced canvas holds the still image.
+    function showWaterShimmer(coverage) {
+      if (!coverage || !coverage.some(alpha => alpha > 0)) return;
+      const mask = document.createElement("canvas");
+      mask.width = canvas.width;
+      mask.height = canvas.height;
+      const context = mask.getContext("2d");
+      const pixels = context.createImageData(mask.width, mask.height);
+      for (let index = 0; index < coverage.length; index++)
+        pixels.data[index * 4 + 3] = coverage[index];
+      context.putImageData(pixels, 0, 0);
+      const shimmer = getElement("waterShimmer");
+      shimmer.style.maskImage = "url(" + mask.toDataURL() + ")";
+      // Choose from visible water pixels, so even a small pool gets a few ripples.
+      const waterPixels = [];
+      for (let index = 0; index < coverage.length; index++)
+        if (coverage[index] > 0) waterPixels.push(index);
+      const glintCount = Math.min(180, Math.ceil(360 * waterPixels.length / coverage.length));
+      for (let i = 0; i < glintCount; i++) {
+        const glint = document.createElement("span");
+        glint.className = "water-glint";
+        const lifetime = 1.4 + Math.random() * 3.2;
+        glint.style.setProperty("--lifetime", lifetime + "s");
+        glint.style.animationDelay = -Math.random() * lifetime + "s";
+
+        function placeGlint() {
+          const pixel = waterPixels[Math.floor(Math.random() * waterPixels.length)];
+          const row = Math.floor(pixel / mask.width);
+          const depth = row / mask.height;
+          glint.style.left = (pixel % mask.width) / mask.width * 100 + "%";
+          glint.style.top = depth * 100 + "%";
+          // Nearer crests spread wider. Most catch a little light, a few flash silver.
+          glint.style.width = (0.4 + Math.random() * 1.9) * (0.5 + depth) + "%";
+          glint.style.height = (1 + Math.random() * 2 * depth) + "px";
+          glint.style.setProperty("--angle", (Math.random() * 8 - 4) + "deg");
+          glint.style.setProperty("--brightness", 0.12 + Math.random() ** 2 * 0.48);
+        }
+        placeGlint();
+        glint.addEventListener("animationiteration", placeGlint);
+        shimmer.append(glint);
+      }
+      shimmer.hidden = false;
+    }
+
     function stopRendering(cancelView = true) {
+      getElement("waterShimmer").replaceChildren();
+      getElement("waterShimmer").hidden = true;
+      getElement("waterShimmer").style.maskImage = "";
       setCameraReady(false);
       showRenderProtection("idle", "Surface locked — render to enable mouse controls.");
       if (cancelView) {
@@ -2597,6 +2833,8 @@
       getElement("stop").disabled = true;
       getElement("render").disabled = false;
     }
+    // The browser owns the canvas. The worker traces the scene and returns
+    // rows of RGBA pixels. Assemble them off screen while the wireframe is visible.
     function renderScene(preview = false) {
       stopRendering(false);
       try {
@@ -2618,17 +2856,41 @@
         getElement("render").disabled = true;
         getElement("status").textContent = "Rendering…";
         showRenderProtection("rendering", "Rendering… 0%");
+        const finishedImage = screenContext.createImageData(width, height);
+        // Draw the edges once off screen. Reveal only the rows the worker has traced.
+        const wireCanvas = document.createElement("canvas");
+        wireCanvas.width = width;
+        wireCanvas.height = height;
+        const wireContext = wireCanvas.getContext("2d");
         renderWorker.onmessage = ({ data: d }) => {
+          if (d.wireframe) {
+            wireContext.strokeStyle = "#c1cbd4";
+            wireContext.lineWidth = 0.65;
+            wireContext.beginPath();
+            for (let i = 0; i < d.wireframe.length; i += 4) {
+              wireContext.moveTo(d.wireframe[i], d.wireframe[i + 1]);
+              wireContext.lineTo(d.wireframe[i + 2], d.wireframe[i + 3]);
+              // Limit the size of each canvas path on large triangle meshes.
+              if (i % 8192 === 8188) {
+                wireContext.stroke();
+                wireContext.beginPath();
+              }
+            }
+            wireContext.stroke();
+          }
           if (d.pixels) {
-            screenContext.putImageData(new ImageData(d.pixels, width, d.rows), 0, d.y);
+            screenContext.drawImage(wireCanvas, 0, d.y, width, d.rows, 0, d.y, width, d.rows);
+            finishedImage.data.set(d.pixels, d.y * width * 4);
             getElement("progress").value = d.percent;
             getElement("status").textContent = d.percent + "% · " + d.seconds.toFixed(1) + " s";
             getElement("renderActivity").textContent =
               "Rendering… " + d.percent + "% · " + d.seconds.toFixed(1) + " s";
           }
           if (d.done) {
+            screenContext.putImageData(finishedImage, 0, 0);
             stopRendering(false);
             showRenderProtection("complete", "Render complete");
+            showWaterShimmer(d.waterMask);
             getElement("save").disabled = false;
             getElement("status").textContent =
               width + " × " + height + " · " + d.seconds.toFixed(1) + " s";
@@ -2665,6 +2927,7 @@
     function selectBuildFunction() {
       stopRendering();
       const sceneType = getElement("preset").value;
+      getElement("imageMaterials").replaceChildren();
       showSceneControls(sceneType);
       if (sceneType === "mountain") {
         getElement("mountainGenerate").click();
@@ -2684,9 +2947,9 @@
           : "Browser demonstration scene.");
       cameraElevation = 0;
       getElement("orbit").value = 0;
-      getElement("zoom").value = 100;
+      getElement("zoom").value = getElement("zoom").defaultValue;
       getElement("orbitOut").textContent = "0°";
-      getElement("zoomOut").textContent = "100%";
+      getElement("zoomOut").textContent = getElement("zoom").value + "%";
       renderScene();
     }
 
@@ -2799,8 +3062,8 @@
           cameraElevation = 0;
           getElement("orbit").value = 0;
           getElement("orbitOut").textContent = "0°";
-          getElement("zoom").value = 100;
-          getElement("zoomOut").textContent = "100%";
+          getElement("zoom").value = getElement("zoom").defaultValue;
+          getElement("zoomOut").textContent = getElement("zoom").value + "%";
           syncSceneControls();
           getElement("sceneName").textContent = file.name;
           getElement("sceneDescription").textContent =
@@ -2879,8 +3142,8 @@
           cameraElevation = 0;
           getElement("orbit").value = 0;
           getElement("orbitOut").textContent = "0°";
-          getElement("zoom").value = 100;
-          getElement("zoomOut").textContent = "100%";
+          getElement("zoom").value = getElement("zoom").defaultValue;
+          getElement("zoomOut").textContent = getElement("zoom").value + "%";
           getElement("sceneName").textContent = request.palette + " mountain";
           getElement("sceneDescription").textContent =
             `MountainGen-HTML · seed ${request.seed} · ${(4 ** request.detailLevel).toLocaleString()} terrain triangles · roughness ${request.roughness}.`;
@@ -2970,15 +3233,12 @@
       stopRendering();
       cameraElevation = 0;
       getElement("orbit").value = 0;
-      getElement("zoom").value = 100;
+      getElement("zoom").value = getElement("zoom").defaultValue;
       updateViewControls();
       renderScene();
     }
     canvas.addEventListener("dblclick", resetView);
     getElement("resetView").onclick = resetView;
-    for (const id of ["orbit", "zoom"]) {
-      getElement(id).addEventListener("input", () => scheduleViewRender());
-    }
 
     // A separate draft keeps edits out of the active render until Render scene.
     // Only the selected object's fields are mounted, even for large terrain meshes.
@@ -3026,6 +3286,8 @@
       return group;
     }
     function editField(parent, owner, key, title = editLabels[key] || key) {
+      // Image pixels have their own upload controls, never thousands of numeric fields.
+      if (["image", "imagePlane"].includes(key)) return;
       const value = owner[key];
       // Convert the renderer's 0–1 RGB arrays only when the picker is edited.
       // Untouched colours retain their original precision in the scene draft.
@@ -3092,6 +3354,7 @@
           ["checker", "Checker"],
           ["marble", "Marble"],
           ["wood", "Wood"],
+          ...(owner.image ? [["image", "Uploaded image"]] : []),
         ]) {
           const option = document.createElement("option");
           option.value = v;
@@ -3145,8 +3408,158 @@
         texture: "",
         ...object.material,
       };
-      Object.keys(object).forEach((key) => editField(host, object, key));
+      Object.keys(object).filter((key) => key !== "terrainSurface").forEach((key) => editField(host, object, key));
+      showImageMaterialControls(object);
     }
+
+    function showImageMaterialControls(object) {
+      const host = getElement("imageMaterials");
+      const draft = sceneDraft;
+      const mountain = getElement("preset").value === "mountain";
+      host.replaceChildren();
+      if (mountain !== Boolean(draft.terrainImages)) return;
+      const heading = document.createElement("h3");
+      heading.textContent = mountain ? "Mountain materials" : "Material";
+      const help = document.createElement("p");
+      help.className = "muted";
+      help.textContent = "Choose a PNG, JPEG or WebP (up to 20 MB), then press Render scene.";
+      host.append(heading, help);
+      const grid = document.createElement("div");
+      grid.className = "material-pickers";
+      if (mountain) {
+        const label = document.createElement("label");
+        const scope = document.createElement("input");
+        scope.type = "checkbox";
+        scope.checked = draft.rockImagesOnly;
+        scope.onchange = () => { draft.rockImagesOnly = scope.checked; };
+        label.append(scope, " Use rock image on bare rock only");
+        host.append(label);
+        for (const [surface, name] of Object.entries({
+          rock: "Rock", water: "Water", snow: "Snow", vegetation: "Vegetation",
+        })) {
+          const slot = draft.terrainImages[surface] ||= {};
+          addImagePicker(grid, name, slot);
+        }
+      } else {
+        const label = document.createElement("label");
+        label.textContent = "Scene object";
+        const number = document.createElement("input");
+        const editor = getElement("editObjectIndex");
+        number.type = "number";
+        number.min = 1;
+        number.max = draft.objects.length;
+        number.value = editor.value;
+        number.onchange = () => {
+          if (!number.value || !number.checkValidity()) return;
+          editor.value = number.value;
+          showObjectFields();
+        };
+        label.append(number);
+        host.append(label);
+        addImagePicker(grid, "Material", object.material);
+        if (object.material.image) {
+          const all = document.createElement("button");
+          all.textContent = "Use material image on all scene objects";
+          all.onclick = () => {
+            const { image, imagePlane, scale } = object.material;
+            for (const target of draft.objects)
+              Object.assign(target.material ||= {}, { texture: "image", image, imagePlane, scale });
+            getElement("sceneEditStatus").textContent = "Image assigned — press Render scene.";
+          };
+          grid.append(all);
+        }
+      }
+      host.append(grid);
+    }
+
+    // Each picker writes into the scene draft. A mountain slot is shared by all
+    // triangles of that surface type. An ordinary object has its own material.
+    function addImagePicker(grid, name, slot) {
+      const card = editGroup(grid, name);
+      const label = document.createElement("label");
+      label.textContent = slot.image ? "Replace image" : "Choose image";
+      const upload = document.createElement("input");
+      upload.type = "file";
+      upload.accept = "image/png,image/jpeg,image/webp";
+      upload.setAttribute("aria-label", name + " image");
+      label.append(upload);
+      card.append(label);
+      const status = document.createElement("p");
+      status.setAttribute("role", "status");
+      status.textContent = slot.image?.name || "Original material";
+      card.append(status);
+      upload.onchange = async () => {
+        const file = upload.files[0];
+        if (!file) return;
+        if (file.size > 20 * 1024 * 1024) {
+          status.textContent = "Choose an image smaller than 20 MB.";
+          return;
+        }
+        const draft = sceneDraft;
+        upload.disabled = true;
+        status.textContent = "Loading image…";
+        let bitmap;
+        try {
+          bitmap = await createImageBitmap(file);
+          const ratio = Math.min(1, 1024 / Math.max(bitmap.width, bitmap.height));
+          const surface = document.createElement("canvas");
+          surface.width = Math.max(1, Math.round(bitmap.width * ratio));
+          surface.height = Math.max(1, Math.round(bitmap.height * ratio));
+          const context = surface.getContext("2d", { willReadFrequently: true });
+          context.drawImage(bitmap, 0, 0, surface.width, surface.height);
+          if (sceneDraft !== draft || !card.isConnected) return;
+          slot.image = { name: file.name, width: surface.width, height: surface.height,
+            pixels: context.getImageData(0, 0, surface.width, surface.height).data };
+          slot.texture = "image";
+          getElement("sceneEditStatus").textContent = "Image loaded — press Render scene.";
+          // Update this card only, so another surface can finish loading independently.
+          if (draft.terrainImages) {
+            const replacement = document.createDocumentFragment();
+            addImagePicker(replacement, name, slot);
+            card.replaceWith(replacement);
+          } else showObjectFields();
+        } catch (error) {
+          status.textContent = "Could not load image. Try a PNG, JPEG or WebP file.";
+        } finally {
+          bitmap?.close();
+          upload.disabled = false;
+        }
+      };
+      if (!slot.image) return;
+      const preview = document.createElement("canvas");
+      preview.width = slot.image.width;
+      preview.height = slot.image.height;
+      preview.setAttribute("aria-label", name + " image preview");
+      preview.getContext("2d").putImageData(new ImageData(slot.image.pixels, preview.width, preview.height), 0, 0);
+      card.append(preview);
+      const mapping = document.createElement("details");
+      const summary = document.createElement("summary");
+      summary.textContent = "Texture mapping";
+      mapping.append(summary);
+      const projection = document.createElement("select");
+      projection.setAttribute("aria-label", name + " projection");
+      for (const [value, title] of [["xz", "Top (XZ)"], ["xy", "Front (XY)"], ["yz", "Side (YZ)"]])
+        projection.add(new Option(title, value));
+      projection.value = slot.imagePlane || "xz";
+      projection.onchange = () => { slot.imagePlane = projection.value; };
+      mapping.append(projection);
+      slot.scale ??= 1;
+      editField(mapping, slot, "scale", "Tile size");
+      card.append(mapping);
+      const remove = document.createElement("button");
+      remove.textContent = "Remove image";
+      remove.onclick = () => {
+        delete slot.image;
+        if (slot.texture === "image") slot.texture = "";
+        if (sceneDraft.terrainImages) {
+          const replacement = document.createDocumentFragment();
+          addImagePicker(replacement, name, slot);
+          card.replaceWith(replacement);
+        } else showObjectFields();
+      };
+      card.append(remove);
+    }
+
     function syncSceneControls() {
       sceneDraft = structuredClone(world);
       sceneDraft.camera.up ||= [0, 1, 0];
@@ -3179,9 +3592,12 @@
     getElement("editObjectIndex").addEventListener("input", showObjectFields);
 
     // -------------------------------------------------------------------------
-    // Initial scene
+    // Initial scene: each page load starts a new mountain. Later renders retain its seed.
     // -------------------------------------------------------------------------
+    getElement("preset").value = "mountain";
+    getElement("mountainDetail").value = "7";
+    getElement("mountainRandom").click();
     selectBuildFunction();
-  
+
   </script>
 </html>
