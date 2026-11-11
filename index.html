@@ -25,13 +25,13 @@
   <style>
     /* Base typography, layout and shared controls. */
     :root {
-      color-scheme: dark;
+      color-scheme: light;
       font-family:
         Segoe UI,
         Arial,
         sans-serif;
-      background: #242e39;
-      color: #e6ecef;
+      background: #ffffff;
+      color: #20252b;
     }
     * {
       box-sizing: border-box;
@@ -41,7 +41,7 @@
     }
     header {
       padding: 24px 30px;
-      border-bottom: 1px solid #313c43;
+      border-bottom: 1px solid #d3d6da;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -52,11 +52,11 @@
       letter-spacing: -1px;
     }
     h1 span {
-      color: #ff6868;
+      color: #b31d29;
     }
     small,
     .muted {
-      color: #a3b2bd;
+      color: #53606c;
     }
     main {
       display: grid;
@@ -65,13 +65,13 @@
     }
     aside {
       padding: 24px;
-      border-right: 1px solid #313c43;
-      background: #171d22;
+      border-right: 1px solid #d3d6da;
+      background: #ffffff;
     }
     label {
       display: block;
       font-size: 13px;
-      color: #b5c4cb;
+      color: #394653;
       margin: 18px 0 7px;
     }
     select,
@@ -79,8 +79,8 @@
     textarea {
       font: inherit;
       color: inherit;
-      background: #242e35;
-      border: 1px solid #43515a;
+      background: #ffffff;
+      border: 1px solid #87919c;
       border-radius: 7px;
       padding: 10px;
       width: 100%;
@@ -90,7 +90,7 @@
       margin-top: 12px;
     }
     button:hover {
-      border-color: #ff6868;
+      border-color: #b31d29;
     }
     button:disabled {
       opacity: 0.4;
@@ -104,7 +104,7 @@
     }
     input[type="range"] {
       width: 100%;
-      accent-color: #ff6868;
+      accent-color: #b31d29;
     }
     .stage {
       padding: 28px;
@@ -129,11 +129,11 @@
     progress {
       width: 100%;
       height: 5px;
-      accent-color: #ff6868;
+      accent-color: #b31d29;
     }
     details {
       margin-top: 20px;
-      color: #b5c4cb;
+      color: #394653;
       line-height: 1.6;
     }
     summary {
@@ -155,13 +155,13 @@
     .tag {
       font-size: 11px;
       letter-spacing: 2px;
-      color: #ff6868;
+      color: #b31d29;
     }
     a {
-      color: #ff6868;
+      color: #b31d29;
     }
     #status {
-      color: #f3f6fa;
+      color: #20252b;
       white-space: pre-wrap;
     }
     @media (max-width: 750px) {
@@ -181,45 +181,45 @@
         display: none;
       }
     }
-    /* Lighter slate interface palette; the render canvas retains its black backdrop. */
+    /* White interface palette; the render canvas retains its black backdrop. */
     :root {
-      color-scheme: dark;
-      background: #2c3845;
-      color: #f3f6fa;
+      color-scheme: light;
+      background: #ffffff;
+      color: #20252b;
     }
     header {
-      background: #2c3845;
-      border-color: #596e80;
+      background: #ffffff;
+      border-color: #d3d6da;
     }
     h1 span,
     .tag {
-      color: #ff6868;
+      color: #b31d29;
     }
     small,
     .muted {
-      color: #c5d1dd;
+      color: #53606c;
     }
     aside {
-      background: #2c3845;
-      border-color: #596e80;
+      background: #ffffff;
+      border-color: #d3d6da;
     }
     .stage {
-      background: #2c3845;
+      background: #ffffff;
     }
     label,
     details {
-      color: #dde6ee;
+      color: #394653;
     }
     select,
     button,
     textarea {
-      background: #2c3845;
-      color: #f3f6fa;
-      border-color: #7a8e9f;
+      background: #ffffff;
+      color: #20252b;
+      border-color: #87919c;
     }
     button:hover {
-      border-color: #ff6868;
-      background: #62313a;
+      border-color: #b31d29;
+      background: #fff0f1;
     }
     .primary {
       background: #b91c26;
@@ -231,10 +231,10 @@
     }
     input[type="range"],
     progress {
-      accent-color: #ff6868;
+      accent-color: #b31d29;
     }
     a {
-      color: #ff6868;
+      color: #b31d29;
     }
     canvas {
       background: #000;
@@ -266,7 +266,7 @@
       padding: 16px 0;
       margin-top: 12px;
       border: 0;
-      border-top: 1px solid #596e80;
+      border-top: 1px solid #d3d6da;
       min-width: 0;
     }
     h2 {
@@ -306,7 +306,7 @@
     .studio {
       margin-top: 12px;
       padding-top: 12px;
-      border-top: 1px solid #596e80;
+      border-top: 1px solid #d3d6da;
     }
     .settings-grid {
       display: grid;
@@ -322,7 +322,7 @@
     input[type="number"] {
       width: 100%;
       padding: 8px;
-      border: 1px solid #7a8e9f;
+      border: 1px solid #87919c;
       border-radius: 6px;
       font: inherit;
     }
@@ -356,7 +356,7 @@
       }
       .scene-panel {
         border-left: 0;
-        border-top: 1px solid #596e80;
+        border-top: 1px solid #d3d6da;
       }
       .settings-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -375,7 +375,7 @@
     .scene-edit {
       margin: 16px 0;
       padding: 14px;
-      border: 1px solid #596e80;
+      border: 1px solid #d3d6da;
       border-radius: 7px;
     }
     .scene-edit > summary {
@@ -391,7 +391,7 @@
     }
     .edit-group {
       min-width: 0;
-      border: 1px solid #596e80;
+      border: 1px solid #d3d6da;
       border-radius: 6px;
       padding: 10px;
       margin: 8px 0;
@@ -422,7 +422,7 @@
       max-width: 110px;
     }
     .scene-edit input:invalid {
-      border-color: #ff8a80;
+      border-color: #b31d29;
     }
     .scene-edit input[type="color"] {
       display: block;
@@ -431,10 +431,10 @@
       height: 40px;
       margin-top: 6px;
       padding: 3px;
-      border: 1px solid #7a8e9f;
+      border: 1px solid #87919c;
       border-radius: 6px;
       cursor: pointer;
-      background: #2c3845;
+      background: #ffffff;
     }
 
     /* Render surface: progress overlay, animation and explicit camera unlock. */
@@ -587,9 +587,9 @@
     .camera-warning {
       margin: 8px 0;
       padding: 10px 14px;
-      background: #30291b;
-      color: #f0d28d;
-      border: 1px solid #796139;
+      background: #fff6dc;
+      color: #63470c;
+      border: 1px solid #c39941;
       border-radius: 6px;
       font-size: 13px;
     }
@@ -602,32 +602,32 @@
     .material-pickers input[type=file] { width: 100%; }
     .material-pickers canvas { width: 72px; height: 48px; object-fit: contain; }
     .material-pickers p { overflow-wrap: anywhere; }
-    /* Native inputs and editor groups use the same dark surfaces. */
+    /* Native inputs and editor groups use the light interface palette. */
     body {
-      background: #242e39;
+      background: #ffffff;
     }
     input[type="number"],
     input[type="text"],
     select,
     textarea {
-      background: #3b4b5b;
-      color: #f3f6fa;
-      border-color: #7a8e9f;
+      background: #ffffff;
+      color: #20252b;
+      border-color: #87919c;
     }
     input[type="checkbox"] {
-      accent-color: #ff6868;
+      accent-color: #b31d29;
     }
     .scene-edit {
-      background: #334250;
+      background: #f6f7f8;
     }
     .edit-group {
-      background: #2c3845;
+      background: #ffffff;
     }
     button:focus-visible,
     input:focus-visible,
     select:focus-visible,
     summary:focus-visible {
-      outline: 2px solid #f05252;
+      outline: 2px solid #b31d29;
       outline-offset: 3px;
     }
   </style>
@@ -706,6 +706,7 @@
           </optgroup>
           <optgroup label="Create a scene">
             <option value="mountain" selected>Mountain generator</option>
+            <option value="random">Random scene generator</option>
             <option value="obj">Imported OBJ model</option>
           </optgroup>
         </select>
@@ -716,6 +717,21 @@
               This preset is ready to render. Adjust quality and camera settings in Render Studio
               below the image, or edit scene values in Render Studio.
             </p>
+          </section>
+          <section data-scene-panel="random" hidden>
+            <h3>Random scene generator</h3>
+            <div class="settings-grid">
+              <div><label for="randomSceneSeed">Scene seed</label>
+                <input id="randomSceneSeed" type="number" min="-2147483648" max="2147483647" step="1" required /></div>
+              <div><label for="randomSceneCount">Number of shapes</label>
+                <select id="randomSceneCount">
+                  <option>6</option><option selected>12</option><option>24</option>
+                </select></div>
+            </div>
+            <div class="row">
+              <button id="randomSceneNew">New random scene</button>
+              <button id="randomSceneRepeat">Generate from seed</button>
+            </div>
           </section>
           <section data-scene-panel="obj" hidden>
             <h3>OBJ model</h3>
@@ -2006,6 +2022,49 @@
         ],
       };
     }
+    // Use one seeded sequence for placement, shape and material. Shuffle the grid
+    // first so objects have room to stand apart, even in a crowded composition.
+    function buildRandomScene(seed, count) {
+      let state = seed >>> 0;
+      function random() {
+        state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+        return state / 4294967296;
+      }
+      const columns = Math.ceil(Math.sqrt(count * 1.5));
+      const rows = Math.ceil(count / columns);
+      const spacing = 2.5;
+      const scene = stage([columns * 1.8, columns * 3.8, columns * 7.8], [0, 0.7, 0], 48);
+      const cells = Array.from({ length: rows * columns }, (_, index) => index);
+      for (let i = 0; i < count; i++) {
+        const pick = i + Math.floor(random() * (cells.length - i));
+        [cells[i], cells[pick]] = [cells[pick], cells[i]];
+        const x = spacing * (cells[i] % columns - (columns - 1) / 2) + (random() - 0.5) * 0.35;
+        const z = spacing * (Math.floor(cells[i] / columns) - (rows - 1) / 2) + (random() - 0.5) * 0.35;
+        const radius = 0.45 + random() * 0.5;
+        const height = 0.7 + random() * 1.8;
+        const colour = Array.from({ length: 3 }, () => 0.05 + random() * 0.85);
+        const finish = random();
+        const material = finish < 0.12 ? glass() : createMaterial(colour, {
+          kr: finish < 0.45 ? 0.55 : 0.08, ks: 0.45, shininess: 80,
+        });
+        switch (Math.floor(random() * 4)) {
+          case 0:
+            scene.objects.push(createSphere([x, radius, z], radius, material));
+            break;
+          case 1:
+            scene.objects.push(createBox([x, height / 2, z], [2 * radius, height, 2 * radius], material));
+            break;
+          case 2:
+            scene.objects.push({ type: "ellipsoid", position: [x, height / 2, z],
+              radii: [radius, height / 2, radius * 0.8], material });
+            break;
+          default:
+            scene.objects.push({ type: "cylinder", position: [x, height / 2, z], radius, height, material });
+        }
+      }
+      return scene;
+    }
+
     /* Source: World.Build_4SpheresSideView / Build_Reflective4SpheresSideView. */
     function Build_4SpheresSideView(reflective) {
       const s = {
@@ -2759,7 +2818,8 @@
     };
     function setCameraReady(ready) {
       cameraReady = ready;
-      for (const id of ["orbit", "zoom", "resetView"]) getElement(id).disabled = !ready;
+      // Reset starts a render. The sliders only prepare settings for the next one.
+      getElement("resetView").disabled = !ready;
       canvas.style.cursor = ready ? "grab" : "default";
       if (!ready && drag) {
         const pointerId = drag.id;
@@ -2917,7 +2977,7 @@
       }
     }
     // New scene types can register a panel here without changing the layout.
-    const sceneControlPanels = { mountain: "mountain", obj: "obj" };
+    const sceneControlPanels = { random: "random", mountain: "mountain", obj: "obj" };
     function showSceneControls(sceneType) {
       const panel = sceneControlPanels[sceneType] || "preset";
       document.querySelectorAll("[data-scene-panel]").forEach((section) => {
@@ -2937,11 +2997,16 @@
         getElement("status").textContent = "Choose an OBJ file to replace the current scene.";
         return;
       }
-      world = buildWorld(getElement("preset").value);
+      const seedInput = getElement("randomSceneSeed");
+      const count = Number(getElement("randomSceneCount").value);
+      if (sceneType === "random" && !seedInput.checkValidity())
+        seedInput.value = crypto.getRandomValues(new Int32Array(1))[0];
+      world = sceneType === "random" ? buildRandomScene(seedInput.valueAsNumber, count) : buildWorld(sceneType);
       syncSceneControls();
       getElement("sceneName").textContent = getElement("preset").selectedOptions[0].textContent;
       getElement("sceneDescription").textContent =
-        EXTRA_SCENES[getElement("preset").value]?.description ||
+        sceneType === "random" ? `Seed ${seedInput.value} · ${count} shapes` :
+        EXTRA_SCENES[sceneType]?.description ||
         (getElement("preset").value === "spiral"
           ? "Original Build_TOSSpiral geometry, with wider camera framing."
           : "Browser demonstration scene.");
@@ -2964,6 +3029,13 @@
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
+    getElement("randomSceneNew").onclick = () => {
+      getElement("randomSceneSeed").value = crypto.getRandomValues(new Int32Array(1))[0];
+      selectBuildFunction();
+    };
+    getElement("randomSceneRepeat").onclick = () => {
+      if (getElement("randomSceneSeed").reportValidity()) selectBuildFunction();
+    };
     getElement("preset").onchange = selectBuildFunction;
     getElement("render").onclick = () => {
       try {
