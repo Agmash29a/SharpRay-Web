@@ -599,7 +599,6 @@
       gap: 10px;
     }
     .material-pickers fieldset { min-width: 0; margin: 0; }
-    .material-pickers input[type=file] { width: 100%; }
     .material-pickers canvas { width: 72px; height: 48px; object-fit: contain; }
     .material-pickers p { overflow-wrap: anywhere; }
     /* Native inputs and editor groups use the light interface palette. */
@@ -703,6 +702,9 @@
             <option value="temple">Marble temple</option>
             <option value="rainbow">Spectrum of glass</option>
             <option value="pyramid">The golden stack</option>
+            <option value="tidewatch">The last watch</option>
+            <option value="drumMachine">Sixteen steps</option>
+            <option value="lanternJellies">Lantern jellies</option>
           </optgroup>
           <optgroup label="Create a scene">
             <option value="mountain" selected>Mountain generator</option>
@@ -755,6 +757,8 @@
               <option value="5">5 · 1,024 triangles</option>
               <option value="6">6 · 4,096 triangles</option>
               <option value="7" selected>7 · 16,384 triangles</option>
+              <option value="8">8 · 65,536 triangles ⚠ High memory use and slower rendering</option>
+              <option value="9">9 · 262,144 triangles ⚠ Very high memory use and longer renders</option>
             </select>
             <label for="mountainRoughness">Roughness (0.2–2.5)</label>
             <input id="mountainRoughness" type="number" min="0.2" max="2.5" step="0.05" value="1" />
@@ -783,7 +787,8 @@
             </label>
             <label for="mountainWaterLevel">Sea level (−90–120)</label>
             <input id="mountainWaterLevel" type="number" min="-90" max="120" step="5" value="0" />
-            <button id="mountainGenerate">Generate mountain</button>
+            <button id="mountainGenerate">Generate from seed</button>
+            <button id="mountainNew">New random mountain</button>
             <p class="muted">
               Same seed and settings reproduce the same landscape. Starts at draft quality; use
               Render to increase quality.
@@ -860,14 +865,13 @@
           <p id="sceneEditStatus" role="status" class="muted"></p>
         </details>
         <div class="render-actions">
-          <button id="render" class="primary">Render scene</button>
+          <button id="render" type="button" class="primary">Render scene</button>
           <div class="row">
             <button id="stop" disabled>Stop</button>
             <button id="save" disabled>Save PNG</button>
           </div>
           <p class="muted" style="font-size: 12px; line-height: 1.6">
-            Change settings, then render. Rendering runs in a background worker so the interface
-            stays responsive.
+            Changes apply when you press Render scene.
           </p>
         </div>
       </section>
@@ -880,7 +884,7 @@
           intersection, closest-hit world traversal, pinhole camera, Phong lighting, checkerboard,
           recursive reflection and Snell refraction logic. Seven adapted original scenes preserve
           their source geometry; framing and shading may differ. Each scene has a provenance note
-          above the render. Six new compositions join the three browser favourites.
+          above the render. Nine new compositions join the three browser favourites.
         </p>
         <p>
           Includes spheres, ellipsoids, planes, boxes, triangles, discs and open cylinders;
@@ -928,8 +932,8 @@
     class TerrainGenerator {
       Generate(request) {
         const { detailLevel, seed, roughness } = request;
-        if (!Number.isInteger(detailLevel) || detailLevel < 2 || detailLevel > 7)
-          throw Error("Detail must be from 2 to 7.");
+        if (!Number.isInteger(detailLevel) || detailLevel < 2 || detailLevel > 9)
+          throw Error("Detail must be from 2 to 9.");
         if (!Number.isFinite(roughness) || roughness < 0.2 || roughness > 2.5)
           throw Error("Roughness must be from 0.2 to 2.5.");
         const start = performance.now(),
@@ -2492,6 +2496,97 @@
           return world;
         },
       },
+      tidewatch: {
+        description: "The last watch. A striped lighthouse stands above the tide as the moon rises behind its lantern.",
+        build() {
+          const world = stage([17, 13, 35], [0, 2.3, 0], 44);
+          world.background = [0.024, 0.042, 0.09];
+          world.objects[0].material = createMaterial([0.035, 0.13, 0.19], { kr: 0.48 });
+          const chalk = createMaterial([0.88, 0.85, 0.7]);
+          const red = createMaterial([0.63, 0.065, 0.045]);
+          const iron = createMaterial([0.055, 0.06, 0.075], { kr: 0.24 });
+          const lamp = createMaterial([1, 0.62, 0.17], { ka: 0.95, kd: 0.12 });
+          function drum(y, radius, height, material) {
+            world.objects.push({ type: "cylinder", position: [0, y, 0], radius, height, material });
+            world.objects.push({ type: "disc", position: [0, y + height / 2, 0],
+              normal: [0, 1, 0], radius, material });
+          }
+          for (let i = 0; i < 13; i++) {
+            const angle = i * 2.4, reach = Math.sqrt(i) * 0.61;
+            world.objects.push({ type: "ellipsoid", position: [reach * Math.cos(angle), 0.04, reach * Math.sin(angle)],
+              radii: [1.15, 0.5 + 0.17 * Math.cos(i), 0.84], material: createMaterial([0.22, 0.19, 0.16]) });
+          }
+          for (let i = 0; i < 5; i++) drum(0.73 + i * 0.59, 0.7 - i * 0.045, 0.59, i % 2 ? red : chalk);
+          drum(3.45, 0.72, 0.15, iron);
+          world.objects.push(createSphere([0, 3.9, 0], 0.32, lamp));
+          for (const x of [-0.38, 0.38]) for (const z of [-0.38, 0.38])
+            world.objects.push(createBox([x, 3.92, z], [0.06, 0.85, 0.06], iron));
+          drum(4.39, 0.7, 0.14, red);
+          world.objects.push(createSphere([-5, 6, -7], 1.04, chalk));
+          return world;
+        },
+      },
+      drumMachine: {
+        description: "Sixteen steps. Copper knobs, cherry-red pads and a glowing step indicator on a tabletop drum machine.",
+        build() {
+          const world = stage([12, 28, 31], [0, 0.35, 0], 42);
+          world.objects[0].material = createMaterial([0.32, 0.17, 0.08], {
+            texture: "wood", color2: [0.12, 0.06, 0.035], scale: 0.35 });
+          const casework = createMaterial([0.07, 0.085, 0.10]);
+          const copper = createMaterial([0.73, 0.39, 0.18], { kr: 0.25 });
+          world.objects.push(createBox([0, 0.23, 0], [7, 0.46, 4.25], casework));
+          for (const x of [-3.55, 3.55])
+            world.objects.push(createBox([x, 0.28, 0], [0.22, 0.56, 4.28], copper));
+          for (let step = 0; step < 16; step++) {
+            const x = -2.86 + step % 8 * 0.82, z = step < 8 ? 0.09 : 1.04;
+            const colour = step % 4 === 0 ? [0.88, 0.12, 0.08] : step % 4 === 2 ? [0.88, 0.45, 0.12] : [0.76, 0.72, 0.63];
+            world.objects.push(createBox([x, 0.55, z], [0.68, 0.18, 0.65], createMaterial(colour)));
+            world.objects.push(createSphere([x, 0.48, z + 0.4], 0.055,
+              createMaterial(step === 5 ? [1, 0.12, 0.03] : [0.22, 0.035, 0.02], { ka: step === 5 ? 1 : 0.12 })));
+          }
+          for (let i = 0; i < 5; i++) {
+            const x = -2.85 + i * 0.91;
+            world.objects.push({ type: "cylinder", position: [x, 0.64, -1.17], radius: 0.28, height: 0.36, material: copper });
+            world.objects.push({ type: "disc", position: [x, 0.82, -1.17], radius: 0.28, normal: [0, 1, 0], material: copper });
+            world.objects.push(createBox([x, 0.83, -1.31], [0.04, 0.02, 0.17], casework));
+          }
+          world.objects.push(createBox([2.05, 0.48, -1.16], [1.75, 0.06, 0.85], createMaterial([0.008, 0.025, 0.024])));
+          for (let i = 0; i < 10; i++)
+            world.objects.push(createBox([1.39 + i * 0.145, 0.52, -1.16], [0.08, 0.02, 0.12 + 0.48 * Math.abs(Math.sin(i * 0.87))],
+              createMaterial([0.08, 0.85, 0.54], { ka: 0.75 })));
+          return world;
+        },
+      },
+      lanternJellies: {
+        description: "Lantern jellies. Three translucent bells drift through dark water, trailing curling strands of light.",
+        build() {
+          const world = stage([5, 8, 38], [0, 2.35, 0], 46);
+          world.objects = [];
+          world.background = [0.006, 0.023, 0.049];
+          function jelly(x, y, z, size, colour) {
+            const pearl = createMaterial(colour, { ka: 0.46, kd: 0.48, ks: 0.65 });
+            world.objects.push({ type: "ellipsoid", position: [x, y, z], radii: [size, size * 0.59, size],
+              material: createMaterial(colour, { ka: 0.18, kt: 0.62, kr: 0.1, ior: 1.18 }) });
+            world.objects.push(createSphere([x, y - size * 0.12, z], size * 0.32, pearl));
+            for (let strand = 0; strand < 7; strand++) {
+              const angle = strand * 2 * Math.PI / 7;
+              for (let bead = 0; bead < 14; bead++) {
+                const t = bead / 13;
+                const bend = angle + 0.58 * Math.sin(t * 4 + strand);
+                world.objects.push(createSphere([
+                  x + size * (0.71 * Math.cos(bend) + 0.32 * t * t),
+                  y - size * (0.28 + t * (1.5 + 0.4 * Math.cos(strand))),
+                  z + size * 0.71 * Math.sin(bend),
+                ], size * (0.11 - 0.055 * t), pearl));
+              }
+            }
+          }
+          jelly(-1.7, 3.4, 0, 1.15, [0.29, 0.84, 0.9]);
+          jelly(1.3, 2.25, 0.6, 0.85, [0.98, 0.40, 0.52]);
+          jelly(2.65, 4.3, -2.4, 0.6, [0.72, 0.56, 0.98]);
+          return world;
+        },
+      },
       pyramid: {
         description:
           "New: a four-tier stack of golden spheres on a dark checkerboard, with a single silver capstone.",
@@ -2730,13 +2825,15 @@
         ) < 1e-8
       )
         fail("Camera eye, target and up must define a valid view.");
+      // At level 9 the mountain has 262,144 terrain triangles plus an optional water surface.
+      const maxObjects = s.terrainImages ? 4 ** 9 + 1 : 50000;
       if (
         !Array.isArray(s.objects) ||
-        s.objects.length > 50000 ||
+        s.objects.length > maxObjects ||
         !Array.isArray(s.lights) ||
         s.lights.length > 16
       )
-        fail("Use at most 50,000 objects and 16 lights.");
+        fail(`Use at most ${maxObjects.toLocaleString()} objects and 16 lights.`);
       for (const l of s.lights) {
         if (
           !(l.direction ? nonzero(l.direction) : vec(l.position)) ||
@@ -2901,8 +2998,10 @@
         validateWorld(world);
         const width = preview === true ? 240 : +getElement("resolution").value,
           height = (width * 2) / 3;
-        canvas.width = width;
-        canvas.height = height;
+        // Draw wireframe edges at screen resolution so a small ray trace still has crisp lines.
+        const displayScale = window.devicePixelRatio || 1;
+        canvas.width = Math.max(1, Math.round(canvas.clientWidth * displayScale));
+        canvas.height = Math.max(1, Math.round(canvas.width * height / width));
         getElement("save").disabled = true;
         getElement("progress").value = 0;
         const url = URL.createObjectURL(
@@ -2910,7 +3009,8 @@
             type: "text/javascript",
           }),
         );
-        renderWorker = new Worker(url);
+        const worker = new Worker(url);
+        renderWorker = worker;
         URL.revokeObjectURL(url);
         getElement("stop").disabled = false;
         getElement("render").disabled = true;
@@ -2919,13 +3019,15 @@
         const finishedImage = screenContext.createImageData(width, height);
         // Draw the edges once off screen. Reveal only the rows the worker has traced.
         const wireCanvas = document.createElement("canvas");
-        wireCanvas.width = width;
-        wireCanvas.height = height;
+        wireCanvas.width = canvas.width;
+        wireCanvas.height = canvas.height;
         const wireContext = wireCanvas.getContext("2d");
-        renderWorker.onmessage = ({ data: d }) => {
+        worker.onmessage = ({ data: d }) => {
+          if (renderWorker !== worker) return;
           if (d.wireframe) {
             wireContext.strokeStyle = "#c1cbd4";
-            wireContext.lineWidth = 0.65;
+            wireContext.scale(wireCanvas.width / width, wireCanvas.height / height);
+            wireContext.lineWidth = displayScale * width / wireCanvas.width;
             wireContext.beginPath();
             for (let i = 0; i < d.wireframe.length; i += 4) {
               wireContext.moveTo(d.wireframe[i], d.wireframe[i + 1]);
@@ -2939,7 +3041,11 @@
             wireContext.stroke();
           }
           if (d.pixels) {
-            screenContext.drawImage(wireCanvas, 0, d.y, width, d.rows, 0, d.y, width, d.rows);
+            const top = Math.round(d.y * wireCanvas.height / height);
+            const bottom = Math.round((d.y + d.rows) * wireCanvas.height / height);
+            if (bottom > top)
+              screenContext.drawImage(wireCanvas, 0, top, wireCanvas.width, bottom - top,
+                                                  0, top, wireCanvas.width, bottom - top);
             finishedImage.data.set(d.pixels, d.y * width * 4);
             getElement("progress").value = d.percent;
             getElement("status").textContent = d.percent + "% · " + d.seconds.toFixed(1) + " s";
@@ -2947,6 +3053,8 @@
               "Rendering… " + d.percent + "% · " + d.seconds.toFixed(1) + " s";
           }
           if (d.done) {
+            canvas.width = width;
+            canvas.height = height;
             screenContext.putImageData(finishedImage, 0, 0);
             stopRendering(false);
             showRenderProtection("complete", "Render complete");
@@ -2956,7 +3064,8 @@
               width + " × " + height + " · " + d.seconds.toFixed(1) + " s";
           }
         };
-        renderWorker.onerror = (e) => {
+        worker.onerror = (e) => {
+          if (renderWorker !== worker) return;
           stopRendering();
           getElement("status").textContent = "Render failed: " + e.message;
           showRenderProtection("idle", "Render failed — adjust settings and render again.");
@@ -3037,7 +3146,23 @@
       if (getElement("randomSceneSeed").reportValidity()) selectBuildFunction();
     };
     getElement("preset").onchange = selectBuildFunction;
+    // A canvas gesture can leave a render scheduled for 200 ms later.
+    // Cancel it when the user starts working in Render Studio.
+    const renderStudio = document.querySelector(".studio");
+    function cancelPendingViewRender() {
+      clearTimeout(qualityTimer);
+      qualityTimer = null;
+    }
+    for (const eventName of ["pointerdown", "focusin", "input", "change"])
+      renderStudio.addEventListener(eventName, cancelPendingViewRender, true);
+
+    function materialImagesReady() {
+      if (!getElement("imageMaterials").querySelector('input[type="file"]:disabled')) return true;
+      getElement("status").textContent = "Image is still loading. Please wait for its preview.";
+      return false;
+    }
     getElement("render").onclick = () => {
+      if (mountainWorker || !materialImagesReady()) return;
       try {
         const next = validateWorld(structuredClone(sceneDraft));
         world = next;
@@ -3162,11 +3287,19 @@
       if (mountainWorker) mountainWorker.terminate();
       mountainWorker = null;
       getElement("mountainGenerate").disabled = false;
+      getElement("mountainNew").disabled = false;
+      getElement("imageMaterials").inert = false;
     }
     getElement("mountainRandom").onclick = () => {
       getElement("mountainSeed").value = crypto.getRandomValues(new Int32Array(1))[0];
     };
+    getElement("mountainNew").onclick = () => {
+      if (!materialImagesReady()) return;
+      getElement("mountainRandom").click();
+      getElement("mountainGenerate").click();
+    };
     getElement("mountainGenerate").onclick = () => {
+      if (!materialImagesReady()) return;
       stopRendering();
       const request = {
         detailLevel: +getElement("mountainDetail").value,
@@ -3190,12 +3323,17 @@
       URL.revokeObjectURL(url);
       mountainWorker = worker;
       getElement("mountainGenerate").disabled = true;
+      getElement("mountainNew").disabled = true;
+      getElement("render").disabled = true;
+      getElement("save").disabled = true;
+      getElement("imageMaterials").inert = true;
       getElement("stop").disabled = false;
       getElement("status").textContent = "Generating mountain…";
       function failed(message) {
         if (mountainWorker !== worker) return;
         cancelMountainGeneration();
         getElement("stop").disabled = true;
+        getElement("render").disabled = false;
         getElement("status").textContent = "Mountain generation failed: " + message;
       }
       worker.onerror = (event) => failed(event.message);
@@ -3206,6 +3344,12 @@
           return;
         }
         try {
+          // Regenerate the geometry and keep the current mountain's surface images,
+          // including edits that have not yet been applied with Render scene.
+          if (sceneDraft?.terrainImages) {
+            data.world.terrainImages = structuredClone(sceneDraft.terrainImages);
+            data.world.rockImagesOnly = sceneDraft.rockImagesOnly;
+          }
           const next = validateWorld(data.world);
           cancelMountainGeneration();
           world = next;
@@ -3548,14 +3692,18 @@
     // triangles of that surface type. An ordinary object has its own material.
     function addImagePicker(grid, name, slot) {
       const card = editGroup(grid, name);
-      const label = document.createElement("label");
-      label.textContent = slot.image ? "Replace image" : "Choose image";
+      // Rebuilding the card clears the browser's file input. Display the filename
+      // from the material instead, so the preview and its label always agree.
       const upload = document.createElement("input");
       upload.type = "file";
+      upload.hidden = true;
       upload.accept = "image/png,image/jpeg,image/webp";
-      upload.setAttribute("aria-label", name + " image");
-      label.append(upload);
-      card.append(label);
+      const choose = document.createElement("button");
+      choose.type = "button";
+      choose.textContent = slot.image ? "Replace image" : "Choose image";
+      choose.setAttribute("aria-label", choose.textContent + " for " + name);
+      choose.onclick = () => upload.click();
+      card.append(choose, upload);
       const status = document.createElement("p");
       status.setAttribute("role", "status");
       status.textContent = slot.image?.name || "Original material";
@@ -3569,6 +3717,7 @@
         }
         const draft = sceneDraft;
         upload.disabled = true;
+        choose.disabled = true;
         status.textContent = "Loading image…";
         let bitmap;
         try {
@@ -3594,7 +3743,9 @@
           status.textContent = "Could not load image. Try a PNG, JPEG or WebP file.";
         } finally {
           bitmap?.close();
+          upload.value = "";
           upload.disabled = false;
+          choose.disabled = false;
         }
       };
       if (!slot.image) return;
